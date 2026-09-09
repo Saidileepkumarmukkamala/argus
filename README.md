@@ -52,15 +52,19 @@ ARGUS_DEMO=1 open Argus.app     # play sample cards
 | Home devices | UDP nudge to the /24, then `arp -an`; vendor from the bundled OUI list |
 | Router impersonation | gateway MAC changes while gateway IP, interface and local address stay the same |
 | HTTPS interception (optional) | `curl -v https://www.apple.com` issuer line |
-| Persistence | `~/Library/LaunchAgents`, `/Library/LaunchAgents`, `/Library/LaunchDaemons`, `sfltool dumpbtm` |
+| Persistence | `~/Library/LaunchAgents`, `/Library/LaunchAgents`, `/Library/LaunchDaemons`, `launchctl list` |
 | Integrity | md5 of `/etc/hosts`, `~/.ssh/authorized_keys`, shell rc files; `crontab -l`; `systemextensionsctl list`; `security dump-trust-settings` |
 | Keystroke taps | `CGGetEventTapList` — any process tapping keyDown/keyUp/flagsChanged, with its code signer |
 | Live remote sessions | `who` for network logins, plus the Screen Sharing daemon and its peer address |
 | Notarization | `spctl --assess --type execute` on app launch (NSWorkspace notification) |
-| Board | `fdesetup`, `socketfilterfw`, `spctl --status`, `csrutil`, `sysadminctl -screenLock`, `defaults` (SoftwareUpdate, loginwindow, sharingd), XProtect plist date, `profiles`, `sudo -n true`, `dscl` |
+| Board | `fdesetup`, `socketfilterfw`, `spctl --status`, `csrutil`, `sysadminctl -screenLock`, `defaults` (SoftwareUpdate, loginwindow, sharingd), XProtect plist date, `profiles`, `dscl` |
 
 ## False-alarm policy
 Baseline silently on first launch; announce only changes. Debounce VPN state (10 s). Suppress DNS alerts within 90 s
 of a network or VPN transition. Per-key quiet periods (10 min to 30 days). Home networks are quiet unless something
 matters. Amber only when a decision is needed; green for information. If Argus says something that turns out to be
 wrong, that is a bug: open an issue.
+
+## Support
+Argus is free and stays free. There is no pro tier and nothing to unlock.
+If it has been useful, you can [buy me a coffee](https://buymeacoffee.com/ssaiii).

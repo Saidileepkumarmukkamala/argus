@@ -66,7 +66,7 @@ h1,h2,h3,.gk{font-family:Grotesk,system-ui,sans-serif;font-variation-settings:'w
 .eyebrow s{text-decoration:none;width:5px;height:5px;border-radius:50%;background:var(--gr);box-shadow:0 0 10px var(--gr);animation:bl 2.6s infinite}
 @keyframes bl{0%,100%{opacity:1}50%{opacity:.2}}
 h1{font-size:clamp(46px,8.4vw,110px);line-height:.94;letter-spacing:-.05em;margin:30px 0 0;font-variation-settings:'wght' 700}
-h1 em{font-style:normal;background:linear-gradient(96deg,#fff 8%,var(--cy) 52%,var(--vi) 96%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+h1 em,h2 em{font-style:normal;background:linear-gradient(96deg,#fff 8%,var(--cy) 52%,var(--vi) 96%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 .lede{font-size:clamp(16px,1.55vw,19.5px);color:var(--fog);max-width:588px;margin:26px auto 0;line-height:1.62}
 .cta{display:flex;gap:13px;justify-content:center;flex-wrap:wrap;margin-top:38px}
 .big{display:inline-flex;align-items:center;gap:12px;background:var(--paper);color:#05070c;padding:13px 13px 13px 26px;border-radius:999px;
@@ -79,6 +79,18 @@ h1 em{font-style:normal;background:linear-gradient(96deg,#fff 8%,var(--cy) 52%,v
  font-size:15px;transition:border-color .6s var(--sp),transform .6s var(--sp)}
 .ghost:hover{border-color:rgba(255,255,255,.32);transform:translateY(-2px)}
 .fine{margin-top:20px;font-size:12.5px;color:var(--fog2);font-family:var(--mono);letter-spacing:.03em}
+/* support */
+.sup{display:flex;align-items:center;justify-content:space-between;gap:30px;flex-wrap:wrap}
+.supt{font-size:19px;letter-spacing:-.02em;margin-bottom:6px}
+.supd{color:var(--fog);font-size:14.5px;max-width:430px}
+.coffee{display:inline-flex;align-items:center;gap:9px;flex:none;background:linear-gradient(180deg,#ffc46b,var(--am));
+ color:#1a0d02;padding:9px 10px 9px 18px;border-radius:999px;font-weight:600;font-size:14.5px;letter-spacing:-.01em;
+ transition:transform .6s var(--sp),box-shadow .6s var(--sp)}
+.coffee:hover{transform:translateY(-2px);box-shadow:0 18px 44px rgba(255,161,85,.28)}
+.coffee:active{transform:scale(.97)}
+.coffee s{text-decoration:none;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.12);display:grid;place-items:center;transition:transform .6s var(--sp)}
+.coffee:hover s{transform:translate(3px,-1px) scale(1.06)}
+@media(max-width:640px){.coffee{width:100%;justify-content:space-between}}
 
 /* ---- the mac, at true proportions ---- */
 .macwrap{perspective:2200px;margin:64px auto 0;max-width:900px;padding:0 28px}
@@ -319,13 +331,29 @@ footer{margin-top:150px;border-top:1px solid rgba(255,255,255,.06);position:rela
   <section id="verify">
     <div class="rv"><div class="tag">Trust, but verify</div>
       <h2>Build it yourself<br>in ten seconds.</h2>
-      <p class="sub">Four Swift files, no dependencies, no package manager. Everything Argus reads comes from public macOS tools you can run yourself.</p>
+      <p class="sub">Eight Swift files, no dependencies, no package manager. Everything Argus reads comes from public macOS tools you can run yourself.</p>
       <div class="sh"><div class="co" style="padding:8px"><pre>shasum -a 256 ~/Downloads/Argus.zip
 # compare against the checksum on the release page
 
 git clone https://github.com/Saidileepkumarmukkamala/argus
 cd argus/app &amp;&amp; ./build.sh &amp;&amp; open Argus.app</pre></div></div>
       <p class="sub mono" style="margin-top:22px;font-size:13px;color:var(--fog2);max-width:100%">route · ifconfig · arp · scutil · lsof · launchctl · fdesetup · socketfilterfw · spctl · csrutil · sysadminctl · profiles · security · systemextensionsctl · defaults</p>
+    </div>
+  </section>
+
+  <section id="support">
+    <div class="rv" style="max-width:820px">
+      <div class="tag">No paid tier, ever</div>
+      <h2>Argus is free.<br><em>The coffee is optional.</em></h2>
+      <p class="sub">There is no pro version, no licence key, and no upsell waiting three screens in. Everything on this page is everything there is. If Argus caught something worth catching, you can put a coffee behind the next release.</p>
+      <div class="sh"><div class="co sup">
+        <div>
+          <div class="supt">Buy me a coffee</div>
+          <div class="supd">One-off, no account needed. It pays for a second Mac to test on and the time to keep the signals honest.</div>
+        </div>
+        <a class="coffee" href="https://buymeacoffee.com/ssaiii" target="_blank" rel="noopener">Buy me a coffee
+          <s><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13v6a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8Z"/><path d="M17 9h1.5a2.5 2.5 0 0 1 0 5H17"/><path d="M8 2v2.5M12 2v2.5"/></svg></s></a>
+      </div></div>
     </div>
   </section>
 </div>
@@ -344,7 +372,8 @@ cd argus/app &amp;&amp; ./build.sh &amp;&amp; open Argus.app</pre></div></div>
     <div class="fc"><h5>Project</h5>
       <a href="https://github.com/Saidileepkumarmukkamala/argus">Source</a>
       <a href="https://github.com/Saidileepkumarmukkamala/argus/issues">Report a bug</a>
-      <a href="https://github.com/Saidileepkumarmukkamala/argus/blob/main/README.md">Documentation</a></div>
+      <a href="https://github.com/Saidileepkumarmukkamala/argus/blob/main/README.md">Documentation</a>
+      <a href="https://buymeacoffee.com/ssaiii" target="_blank" rel="noopener">Buy me a coffee</a></div>
   </div>
   <div class="fbot"><span>© 2026 Argus. Free and open source.</span>
     <span class="sp"><span>Not affiliated with Apple.</span><span>Vendor names from the IEEE registry.</span></span></div>
