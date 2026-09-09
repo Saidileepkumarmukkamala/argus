@@ -125,12 +125,20 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
     var boardViews: [NSView] = []
     var queue: [Alert] = []            // alerts that arrived while one was on screen
     var showing: Alert?
+    /// What the panel is meant to be showing. Every transition goes through setMode, and the stats ticker re-asserts it
+    /// once a second, so no path can leave the notch open and empty again.
+    enum PanelMode: Equatable { case closed, stats, card, board }
+    var mode: PanelMode = .closed
+    var idleMode: PanelMode { statsOn ? .stats : .closed }
     // always-on strip
     let stats = StatsReader()
     var statsTimer: Timer?
     var statsViews: [NSTextField] = []
+    var statsLine: NSTextField?
+    var statsW: CGFloat = 300
     var statsOn: Bool { Store.shared.state.alwaysOn }
-    let statsDepth: CGFloat = 26, statsWidth: CGFloat = 430
+    let statsDepth: CGFloat = 24
+    var statsWidth: CGFloat { statsW }
 
     func applicationDidFinishLaunching(_ n: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -148,7 +156,7 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
         view.onHover = { [weak self] inside in
             guard let s = self, s.depth > 0 else { return }
             if inside { s.hideTimer?.invalidate(); s.ring.removeAnimation(forKey: "drain") }
-            else { s.armHide(s.boardViews.isEmpty ? 6 : 12) }
+            else { s.armHide(s.boardViews.isEmpty ? 3 : 8) }
         }
         buildLayers()
         for v in [glyph, title, detail, meta] { v.isHidden = true; view.addSubview(v) }
@@ -183,11 +191,11 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
         tintTimer = Timer.scheduledTimer(withTimeInterval: 1800, repeats: true) { [weak self] _ in self?.refreshTint() }
         // Click anywhere else on the screen: close. (Mouse monitors need no permissions; key monitors would.)
         NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-            guard let s = self, s.depth > 0, !s.boardViews.isEmpty || s.showing != nil else { return }
+            guard let s = self, s.mode == .card || s.mode == .board else { return }
             s.hide()
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 20) { self.refreshTint() }
-        if statsOn { DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { self.startStats() } }
+        if statsOn { DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { self.startStats(); self.setMode(.stats) } }
         if ProcessInfo.processInfo.environment["ARGUS_DEMO"] != nil { demo() }
     }
 
@@ -233,7 +241,7 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
         panel.setFrame(closedRect(), display: false)
         view.frame = NSRect(origin: .zero, size: closedRect().size)
         mask.removeAllAnimations(); mask.path = closedPath(in: closedRect().size)
-        panel.orderFrontRegardless()
+        panel.orderFrontRegardless(); setMode(idleMode)
         NSLog("screen changed: notch now %@", NSStringFromRect(notch))
     }
 
@@ -249,28 +257,45 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
     func openPath(_ d: CGFloat, in size: CGSize) -> CGPath { notchPath(bodyWidth: bodyW, depth: notch.height + d, top: earOpen, bottom: bottomOpen, in: size) }
     func closedPath(in size: CGSize) -> CGPath { notchPath(bodyWidth: notch.width, depth: notch.height, top: earClosed, bottom: bottomClosed, in: size) }
 
+    /// Resize the window and morph the silhouette to depth `d`.
+    /// Growing: enlarge the window first, then animate. Shrinking: animate, then shrink the window once the spring has
+    /// settled. The old code only shrank the window on a full close, so coming back from an alert to the stats strip
+    /// left an oversized window: a dark band that also swallowed clicks.
     func setDepth(_ d: CGFloat, width: CGFloat? = nil) {
         gen += 1; let g = gen
+        let oldDepth = depth
         if let w = width { bodyW = w }
-        defer { syncHitRegion() }
-        let size = openSize(max(d, depth))
+        let growing = d > oldDepth
+        let animSize = openSize(max(d, oldDepth))          // the window must cover both shapes while it animates
         if d > 0 {
-            panel.setFrame(openRect(max(d, depth)), display: false); view.frame = NSRect(origin: .zero, size: size)
-            if depth == 0 { mask.removeAllAnimations(); mask.path = closedPath(in: size) }
-            layout(size: size, d: d)
+            panel.setFrame(openRect(max(d, oldDepth)), display: false)
+            view.frame = NSRect(origin: .zero, size: animSize)
+            if oldDepth == 0 { mask.removeAllAnimations(); mask.path = closedPath(in: animSize) }
+            layout(size: animSize, d: d)
         }
-        let to = d > 0 ? openPath(d, in: size) : closedPath(in: size)
+        let to = d > 0 ? openPath(d, in: animSize) : closedPath(in: animSize)
         let anim = CASpringAnimation(keyPath: "path"); anim.fromValue = mask.presentation()?.path ?? mask.path; anim.toValue = to
         anim.damping = 20; anim.stiffness = 300; anim.mass = 1; anim.duration = anim.settlingDuration
         mask.add(anim, forKey: "morph"); mask.path = to
-        if d > 0 && depth == 0 { runSweep(size: size) }
+        if growing && oldDepth == 0 { runSweep(size: animSize) }
         depth = d
-        if d == 0 {
-            DispatchQueue.main.asyncAfter(deadline: .now() + anim.settlingDuration) { [weak self] in
-                guard let s = self, s.gen == g, s.depth == 0 else { return }
-                s.panel.setFrame(s.closedRect(), display: false); s.view.frame = NSRect(origin: .zero, size: s.closedRect().size)
+        syncHitRegion()
+        guard !growing else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + anim.settlingDuration) { [weak self] in
+            guard let s = self, s.gen == g, s.depth == d else { return }
+            if d == 0 {
+                s.panel.setFrame(s.closedRect(), display: false)
+                s.view.frame = NSRect(origin: .zero, size: s.closedRect().size)
                 s.mask.removeAllAnimations(); s.mask.path = s.closedPath(in: s.closedRect().size)
+            } else {
+                let exact = s.openSize(d)
+                s.panel.setFrame(s.openRect(d), display: false)
+                s.view.frame = NSRect(origin: .zero, size: exact)
+                s.mask.removeAllAnimations(); s.mask.path = s.openPath(d, in: exact)
+                s.layout(size: exact, d: d)
+                if s.mode == .stats { s.drawStats() }
             }
+            s.syncHitRegion()
         }
     }
 
@@ -325,8 +350,7 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
     }
     func present(_ a: Alert) {
         showing = a
-        statsViews.forEach { $0.isHidden = true }
-        clearBoard()
+        setMode(.card)
         let d: CGFloat = 78, c = tone(a.level)
         setDepth(d, width: cardW)
         let size = openSize(d), x0 = (size.width - bodyW) / 2
@@ -339,7 +363,7 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
         for v in [glyph, title, detail, meta] { v.isHidden = false; v.alphaValue = 0 }
         NSAnimationContext.runAnimationGroup { ctx in ctx.duration = 0.35; for v in [glyph, title, detail, meta] { v.animator().alphaValue = 1 } }
         // countdown arc + warning pulse
-        let dur: Double = a.sticky ? 45 : 10
+        let dur: Double = a.sticky ? 12 : 3
         let center = CGPoint(x: x0 + bodyW - 26, y: d - 37)
         ring.path = CGPath(ellipseIn: CGRect(x: center.x - 9, y: center.y - 9, width: 18, height: 18), transform: nil)
         ring.strokeColor = c.withAlphaComponent(0.9).cgColor; ring.isHidden = false; ring.removeAllAnimations(); ring.strokeEnd = 0
@@ -369,8 +393,10 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
             }
         }
         NSAnimationContext.runAnimationGroup({ ctx in ctx.duration = 0.18; for v in [glyph, title, detail, meta] { v.animator().alphaValue = 0 }; boardViews.forEach { $0.animator().alphaValue = 0 } },
-            completionHandler: { for v in [self.glyph, self.title, self.detail, self.meta] { v.isHidden = true }; self.clearBoard()
-                                 self.restoreStatsOrClose() })
+            completionHandler: { [weak self] in
+                guard let s = self else { return }
+                if s.showing == nil && s.queue.isEmpty { s.setMode(s.idleMode) }   // only if nothing new claimed it
+            })
         if !statsOn { setDepth(0) }
     }
     func clearBoard() { boardViews.forEach { $0.removeFromSuperview() }; boardViews = [] }
@@ -396,8 +422,7 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
     }
 
     func renderBoard(rows: [Collect.PostureRow], scanning: Bool) {
-        statsViews.forEach { $0.isHidden = true }
-        clearBoard()
+        setMode(.board); clearBoard()
         let rowH: CGFloat = 20, perCol = max(1, (rows.count + 1) / 2), d = CGFloat(perCol) * rowH + 52
         setDepth(d, width: boardW)
         let size = openSize(d), x0 = (size.width - bodyW) / 2
@@ -423,10 +448,7 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
         }
         armHide(40)
     }
-    func clicked() {
-        if !boardViews.isEmpty || showing != nil { hide() }        // something is being shown: dismiss it
-        else { showBoard() }                                        // idle, or the always-on strip: open the board
-    }
+    func clicked() { if mode == .card || mode == .board { hide() } else { showBoard() } }
 
     /// The notch's x-range inside the panel, so clicks on the menu bar either side pass straight through.
     func syncHitRegion() {
@@ -436,16 +458,45 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
         v.menuBarHeight = notch.height
     }
 
+    // MARK: panel state
+    func setMode(_ m: PanelMode) {
+        mode = m
+        switch m {
+        case .closed:
+            hideCardViews(); clearBoard(); statsViews.forEach { $0.isHidden = true }; setDepth(0)
+        case .stats:
+            hideCardViews(); clearBoard()
+            if statsViews.count < 4 { buildStatsViews() }
+            statsViews.forEach { $0.isHidden = false }
+            setDepth(statsDepth, width: statsWidth); drawStats()
+            if statsTimer == nil { startStats() }
+        case .card:
+            clearBoard(); statsViews.forEach { $0.isHidden = true }
+        case .board:
+            hideCardViews(); statsViews.forEach { $0.isHidden = true }
+        }
+    }
+    func hideCardViews() { for v in [glyph, title, detail, meta] { v.isHidden = true }; ring.isHidden = true; pulse.isHidden = true }
+
     // MARK: always-on strip
     /// A permanently open, shallow band under the notch showing live CPU, memory, throughput and Wi-Fi. It yields to
     /// alerts and the board, and restores itself when they close.
     func startStats() {
         stopStats(clearing: false)
         guard statsOn else { return }
-        buildStatsViews()
-        renderStats()
-        statsTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in self?.renderStats() }
-        RunLoop.main.add(statsTimer!, forMode: .common)
+        if statsViews.count < 4 { buildStatsViews() }
+        let t = Timer(timeInterval: 1.0, repeats: true) { [weak self] _ in self?.tick() }
+        statsTimer = t; RunLoop.main.add(t, forMode: .common); tick()
+    }
+    /// Runs every second whether or not the strip is on screen: draws the numbers when the strip owns the panel, and
+    /// repairs the panel if anything left it in the wrong shape.
+    private func tick() {
+        guard statsOn else { return }
+        if mode == .card || mode == .board { return }
+        if mode != .stats || depth != statsDepth || bodyW != statsWidth || statsViews.contains(where: { $0.isHidden }) {
+            setMode(.stats); return
+        }
+        drawStats()
     }
     func stopStats(clearing: Bool = true) {
         statsTimer?.invalidate(); statsTimer = nil
@@ -453,46 +504,51 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
     }
     private func buildStatsViews() {
         statsViews.forEach { $0.removeFromSuperview() }; statsViews = []
-        for _ in 0..<4 {
-            let l = label("", size: 10.5, weight: .medium, color: Theme.dim, mono: true)
-            view.addSubview(l); statsViews.append(l)
-        }
+        let l = NSTextField(labelWithAttributedString: NSAttributedString(string: ""))
+        l.alignment = .center; l.maximumNumberOfLines = 1
+        view.addSubview(l); statsViews = [l]; statsLine = l
     }
-    private func renderStats() {
-        guard statsOn, showing == nil, boardViews.isEmpty else { return }
-        if depth != statsDepth || bodyW != statsWidth { setDepth(statsDepth, width: statsWidth) }
+    /// Pure drawing; it never changes the panel's shape, setMode owns that.
+    /// One centred line: a dim label, a bright value, a faint separator. Values are padded to a fixed character count
+    /// so the line never jitters as the numbers change, which is what lets the strip size itself to its content.
+    private func drawStats() {
+        guard let line = statsLine else { return }
         syncHitRegion()
-        if statsViews.count < 4 { buildStatsViews() }
         let s = stats.read(interface: monitor.net.iface.isEmpty ? "en0" : monitor.net.iface)
-        let size = openSize(statsDepth), x0 = (size.width - statsWidth) / 2
         let bars = StatsReader.bars(s.rssi)
-        let wifiCell: String
-        if s.wifi {
-            let meter = String(repeating: "▮", count: bars) + String(repeating: "▯", count: 4 - bars)
-            wifiCell = s.txRate > 0 ? String(format: "%@ %.0fM", meter, s.txRate) : meter
-        } else { wifiCell = monitor.net.online ? "WIRED" : "OFFLINE" }
-        let cells: [(String, NSColor)] = [
-            (String(format: "CPU %.0f%%", s.cpu * 100), s.cpu > 0.8 ? Theme.amber : Theme.cyan),
-            (String(format: "MEM %.1fG", s.memGB), s.memUsed > 0.9 ? Theme.amber : Theme.dim),
-            ("↓" + StatsReader.rate(s.down) + "  ↑" + StatsReader.rate(s.up), Theme.dim),
-            (wifiCell, s.wifi && bars <= 1 ? Theme.amber : Theme.dim)
+        let meter = String(repeating: "▮", count: bars) + String(repeating: "▯", count: 4 - bars)
+        let net = "↓" + StatsReader.rate(s.down).padding(toLength: 5, withPad: " ", startingAt: 0)
+                + "↑" + StatsReader.rate(s.up).padding(toLength: 5, withPad: " ", startingAt: 0)
+        var parts: [(String, String, NSColor)] = [
+            ("CPU", String(format: "%3.0f%%", s.cpu * 100), s.cpu > 0.8 ? Theme.amber : Theme.cyan),
+            ("MEM", String(format: "%4.1fG", s.memGB), s.memUsed > 0.9 ? Theme.amber : Theme.text),
+            ("NET", net, Theme.text),
         ]
-        let w = (statsWidth - 28) / 4
-        for (i, (text, colour)) in cells.enumerated() {
-            let l = statsViews[i]
-            l.stringValue = text; l.textColor = colour; l.font = NSFont.monospacedSystemFont(ofSize: 9.5, weight: .medium)
-            l.frame = NSRect(x: x0 + 14 + CGFloat(i) * w, y: statsDepth / 2 - 8, width: w - 2, height: 15)
-            l.alignment = i == 0 ? .left : (i == 3 ? .right : .center)
-            l.isHidden = false
+        if s.wifi {
+            parts.append(("WIFI", meter + (s.txRate > 0 ? String(format: " %4.0fM", s.txRate) : ""),
+                          bars <= 1 ? Theme.amber : Theme.text))
+        } else {
+            parts.append(("NET", monitor.net.online ? "wired" : "offline", monitor.net.online ? Theme.text : Theme.amber))
         }
-    }
-    /// Called whenever an alert or the board finishes, so the strip comes back.
-    func restoreStatsOrClose() {
-        guard statsOn else { setDepth(0); return }
-        statsViews.forEach { $0.isHidden = false }
-        setDepth(statsDepth, width: statsWidth)     // unconditional: the board leaves the panel at its own size
-        renderStats()
-        if statsTimer == nil { startStats() }        // the ticker must never be left stopped
+        let lab = NSFont.monospacedSystemFont(ofSize: 9, weight: .semibold)
+        let val = NSFont.monospacedSystemFont(ofSize: 10, weight: .medium)
+        let out = NSMutableAttributedString()
+        for (i, (name, value, colour)) in parts.enumerated() {
+            if i > 0 { out.append(NSAttributedString(string: "  ·  ", attributes: [.font: lab, .foregroundColor: NSColor(white: 1, alpha: 0.22)])) }
+            out.append(NSAttributedString(string: name + " ", attributes: [.font: lab, .foregroundColor: NSColor(white: 1, alpha: 0.40)]))
+            out.append(NSAttributedString(string: value, attributes: [.font: val, .foregroundColor: colour]))
+        }
+        line.attributedStringValue = out
+        // Size the strip to the text, rounded to a step so it never twitches between frames.
+        let needed = ceil(out.size().width) + 30
+        let stepped = (needed / 10).rounded(.up) * 10
+        if abs(stepped - statsW) > 1 {
+            statsW = max(260, min(560, stepped))
+            if mode == .stats { setDepth(statsDepth, width: statsWidth) }
+        }
+        let size = openSize(statsDepth)
+        line.frame = NSRect(x: (size.width - statsW) / 2, y: statsDepth / 2 - 8, width: statsW, height: 16)
+        line.isHidden = false
     }
 
     // MARK: menu
@@ -545,8 +601,8 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
     @objc func menuLocation() { loc.requestWhenInUseAuthorization() }
     @objc func menuAlwaysOn(_ item: NSMenuItem) {
         Store.shared.state.alwaysOn.toggle(); Store.shared.save(); rebuildMenu()
-        if statsOn { startStats() }
-        else { stopStats(); if showing == nil && boardViews.isEmpty { setDepth(0) } }
+        if statsOn { startStats() } else { stopStats() }
+        if showing == nil && boardViews.isEmpty { setMode(idleMode) }
     }
     @objc func menuTLS(_ item: NSMenuItem) {
         Store.shared.state.tlsCheck.toggle(); Store.shared.save(); rebuildMenu(); syncIcon()
@@ -604,10 +660,10 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
 
     func demo() {
         let samples: [Alert] = [
-            Alert(level: .warning, title: "Open Wi-Fi: Airport Free WiFi", detail: "No encryption. Anyone nearby can read unencrypted traffic. Use a VPN here.", key: "join-demo", sticky: false),
+            Alert(level: .warning, title: "DEMO · " + "Open Wi-Fi: Airport Free WiFi", detail: "No encryption. Anyone nearby can read unencrypted traffic. Use a VPN here.", key: "join-demo", sticky: false),
             Alert(level: .warning, title: "VPN dropped", detail: "You're on Airport Free WiFi directly now.", key: "vpn-down", sticky: false),
             Alert(level: .notice, title: "node is open to this network", detail: "Listening on port 3000 on all interfaces. Bind it to localhost if that isn't intended.", key: "listen-demo", sticky: false),
-            Alert(level: .notice, title: "New device on Home", detail: "Samsung at 10.0.0.55.", key: "dev-demo", sticky: false),
+            Alert(level: .notice, title: "DEMO · " + "New device on Home", detail: "Samsung at 10.0.0.55.", key: "dev-demo", sticky: false),
             Alert(level: .notice, title: "DNS changed", detail: "Lookups now go to the router (10.0.0.1).", key: "dns-demo", sticky: false),
         ]
         for (i, a) in samples.enumerated() { DispatchQueue.main.asyncAfter(deadline: .now() + 2 + Double(i) * 7) { self.show(a) } }
