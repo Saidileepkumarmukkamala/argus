@@ -10,7 +10,17 @@ struct State: Codable {
     var seenListeners: [String] = []          // "process:port" already announced
     var lastAlert: [String: Date] = [:]        // rate limiting by alert key
     var pausedUntil: Date? = nil
+    var persistenceItems: [String] = []     // launch agents/daemons + login items already known
+    var hostsHash: String = ""
+    var customRoots: Int = -1
+    var sharingSeen: [String] = []
+    var assessedApps: [String] = []          // bundle ids already checked for notarization
+    var events: [EventRecord] = []           // last 40 alerts shown
+    var tlsCheck: Bool = false               // optional: verify HTTPS to apple.com on new networks (the only connection Ledge ever makes)
+    var fileHashes: [String: String] = [:]   // authorized_keys, crontab, shell rc
+    var sysExtensions: [String] = []
 }
+struct EventRecord: Codable { var time: Date; var title: String; var detail: String; var level: String }
 
 final class Store {
     static let shared = Store()

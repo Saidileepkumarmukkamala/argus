@@ -6,18 +6,28 @@ import ServiceManagement
 
 final class NotchPanel: NSPanel { override var canBecomeKey: Bool { false } }
 
+/// The notch silhouette. Two different curve families, because the corners are doing opposite jobs:
+/// the top "ears" are concave fillets that should sweep gently into the menu bar (superellipse exponent < 2),
+/// the bottom corners are convex and get Apple's squircle continuity (exponent > 2). Every corner is sampled with the
+/// same number of segments, so the open and closed paths tween cleanly under a spring animation.
 func notchPath(bodyWidth: CGFloat, depth: CGFloat, top: CGFloat, bottom: CGFloat, in size: CGSize) -> CGPath {
     let yT = size.height, yB = size.height - depth
     let x1 = ((size.width - bodyWidth) / 2).rounded(), x2 = x1 + bodyWidth
     let p = CGMutablePath()
-    p.move(to: CGPoint(x: x1 - top, y: yT))
-    p.addQuadCurve(to: CGPoint(x: x1, y: yT - top), control: CGPoint(x: x1, y: yT))
-    p.addLine(to: CGPoint(x: x1, y: yB + bottom))
-    p.addQuadCurve(to: CGPoint(x: x1 + bottom, y: yB), control: CGPoint(x: x1, y: yB))
-    p.addLine(to: CGPoint(x: x2 - bottom, y: yB))
-    p.addQuadCurve(to: CGPoint(x: x2, y: yB + bottom), control: CGPoint(x: x2, y: yB))
-    p.addLine(to: CGPoint(x: x2, y: yT - top))
-    p.addQuadCurve(to: CGPoint(x: x2 + top, y: yT), control: CGPoint(x: x2, y: yT))
+    let steps = 28, nEar: CGFloat = 1.5, nBottom: CGFloat = 5.0
+    func corner(_ cx: CGFloat, _ cy: CGFloat, _ r: CGFloat, _ a0: CGFloat, _ a1: CGFloat, _ n: CGFloat) {
+        for k in 0...steps {
+            let t = (a0 + (a1 - a0) * CGFloat(k) / CGFloat(steps)) * .pi / 180
+            let c = cos(t), s = sin(t)
+            let x = cx + r * (c < 0 ? -1 : 1) * pow(abs(c), 2 / n)
+            let y = cy + r * (s < 0 ? -1 : 1) * pow(abs(s), 2 / n)
+            if p.isEmpty { p.move(to: CGPoint(x: x, y: y)) } else { p.addLine(to: CGPoint(x: x, y: y)) }
+        }
+    }
+    corner(x1 - top, yT - top, top, 90, 0, nEar)                     // left ear, concave into the menu bar
+    corner(x1 + bottom, yB + bottom, bottom, 180, 270, nBottom)      // bottom-left
+    corner(x2 - bottom, yB + bottom, bottom, 270, 360, nBottom)      // bottom-right
+    corner(x2 + top, yT - top, top, 180, 90, nEar)                   // right ear
     p.closeSubpath()
     return p
 }
@@ -45,12 +55,15 @@ func label(_ text: String, size: CGFloat, weight: NSFont.Weight, color: NSColor,
     return l
 }
 
-final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate {
+final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSMenuDelegate {
+    func menuNeedsUpdate(_ menu: NSMenu) { rebuildMenu(); status.menu?.delegate = self }
     var panel: NotchPanel!
     let mask = CAShapeLayer()
     var view: ClickView!
     var notch = NSRect.zero
-    let bodyW: CGFloat = 420, earOpen: CGFloat = 19, earClosed: CGFloat = 6, bottomOpen: CGFloat = 22, bottomClosed: CGFloat = 14
+    var bodyW: CGFloat = 440
+    let cardW: CGFloat = 440, boardW: CGFloat = 640, earOpen: CGFloat = 32, earClosed: CGFloat = 8, bottomOpen: CGFloat = 44, bottomClosed: CGFloat = 16
+    var tintTimer: Timer?
     var depth: CGFloat = 0
     var status: NSStatusItem!
     let monitor = Monitor()
@@ -83,11 +96,20 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate {
 
         status = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         status.button?.image = NSImage(systemSymbolName: "shield.lefthalf.filled", accessibilityDescription: "Ledge")
-        rebuildMenu()
+        rebuildMenu(); status.menu?.delegate = self
         loc.delegate = self
         monitor.locationAllowed = loc.authorizationStatus == .authorizedAlways || loc.authorizationStatus == .authorized
         monitor.onAlert = { [weak self] a in self?.show(a) }
         monitor.start()
+        NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didLaunchApplicationNotification, object: nil, queue: .main) { [weak self] n in
+            guard let app = n.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication, let url = app.bundleURL, let bid = app.bundleIdentifier else { return }
+            let name = app.localizedName ?? bid
+            self?.monitor.q.asyncAfter(deadline: .now() + 3) { self?.monitor.appLaunched(name: name, bundleID: bid, path: url.path) }
+        }
+        tintTimer = Timer.scheduledTimer(withTimeInterval: 1800, repeats: true) { [weak self] _ in self?.refreshTint() }
+        // Click anywhere else on the screen: close. (Mouse monitors need no permissions; key monitors would.)
+        NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in if let s = self, s.depth > 0 { s.hide() } }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 20) { self.refreshTint() }
         if ProcessInfo.processInfo.environment["LEDGE_DEMO"] != nil { demo() }
     }
 
@@ -155,6 +177,14 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate {
         }
     }
 
+    func refreshTint() {
+        monitor.q.async { [weak self] in
+            guard let s = self else { return }
+            let bad = Collect.posture(net: s.monitor.net, vpn: s.monitor.vpn ?? false, quick: true).filter { !$0.ok }.count
+            DispatchQueue.main.async { s.status.button?.contentTintColor = bad > 0 ? Theme.amber : nil }
+        }
+    }
+
     // MARK: alert card
     func tone(_ l: Level) -> NSColor { l == .warning ? Theme.amber : (l == .notice ? Theme.green : Theme.cyan) }
     func symbol(for a: Alert) -> String {
@@ -181,6 +211,8 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate {
     func show(_ a: Alert) {
         if a.level == .info { return }
         clearBoard()
+        if depth > 0 && bodyW != cardW { setDepth(0) }
+        bodyW = cardW
         let d: CGFloat = 78, c = tone(a.level)
         setDepth(d)
         let size = openSize(d), x0 = (size.width - bodyW) / 2
@@ -220,20 +252,23 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate {
         for v in [glyph, title, detail, meta] { v.isHidden = true }
         clearBoard(); ring.isHidden = true; pulse.isHidden = true
         let rows = Collect.posture(net: monitor.net, vpn: monitor.vpn ?? false)
-        let rowH: CGFloat = 20, d = CGFloat(rows.count) * rowH + 48
+        if depth > 0 && bodyW != boardW { setDepth(0) }
+        bodyW = boardW
+        let rowH: CGFloat = 20, perCol = (rows.count + 1) / 2, d = CGFloat(perCol) * rowH + 52
         setDepth(d)
         let size = openSize(d), x0 = (size.width - bodyW) / 2
         let bad = rows.filter { !$0.ok }.count
         let head = label("SYSTEM STATUS", size: 10, weight: .semibold, color: Theme.cyan, mono: true); head.frame = NSRect(x: x0 + 20, y: d - 26, width: 200, height: 14)
-        let sum = label(bad == 0 ? "ALL CLEAR" : "\(bad) NEEDS ATTENTION", size: 10, weight: .semibold, color: bad == 0 ? Theme.green : Theme.amber, mono: true); sum.frame = NSRect(x: x0 + bodyW - 220, y: d - 26, width: 200, height: 14); sum.alignment = .right
-        var y = d - 40
+        let sum = label(bad == 0 ? "ALL CLEAR" : "\(bad) NEED\(bad == 1 ? "S" : "") ATTENTION", size: 10, weight: .semibold, color: bad == 0 ? Theme.green : Theme.amber, mono: true); sum.frame = NSRect(x: x0 + bodyW - 220, y: d - 26, width: 200, height: 14); sum.alignment = .right
         var all: [NSView] = [head, sum]
-        for r in rows {
-            let led = NSView(frame: NSRect(x: x0 + 22, y: y - 12, width: 7, height: 7)); led.wantsLayer = true; led.layer?.cornerRadius = 3.5
+        let colW = (bodyW - 40) / 2
+        for (i, r) in rows.enumerated() {
+            let col = CGFloat(i / perCol), cx = x0 + 20 + col * colW, y = d - 40 - CGFloat(i % perCol) * rowH
+            let led = NSView(frame: NSRect(x: cx + 2, y: y - 12, width: 7, height: 7)); led.wantsLayer = true; led.layer?.cornerRadius = 3.5
             let c = r.ok ? Theme.green : Theme.amber; led.layer?.backgroundColor = c.cgColor; led.layer?.shadowColor = c.cgColor; led.layer?.shadowRadius = 5; led.layer?.shadowOpacity = 0.9; led.layer?.shadowOffset = .zero
-            let l = label(r.label, size: 12, weight: .medium, color: Theme.text); l.frame = NSRect(x: x0 + 40, y: y - 16, width: 170, height: 16)
-            let v = label(r.value, size: 11, weight: .medium, color: r.ok ? Theme.dim : Theme.text, mono: true); v.frame = NSRect(x: x0 + 200, y: y - 16, width: bodyW - 220, height: 16); v.alignment = .right
-            all += [led, l, v]; y -= rowH
+            let l = label(r.label, size: 11.5, weight: .medium, color: Theme.text); l.frame = NSRect(x: cx + 18, y: y - 16, width: 128, height: 16)
+            let v = label(r.value, size: 10, weight: .medium, color: r.ok ? Theme.dim : Theme.text, mono: true); v.frame = NSRect(x: cx + 146, y: y - 15, width: colW - 156, height: 14); v.alignment = .right; v.toolTip = r.hint
+            all += [led, l, v]
         }
         let foot = label(metaLine(), size: 10, weight: .medium, color: Theme.cyan.withAlphaComponent(0.7), mono: true); foot.frame = NSRect(x: x0 + 40, y: 6, width: bodyW - 60, height: 13); all.append(foot)
         for (i, v) in all.enumerated() {
@@ -254,6 +289,13 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate {
         if !monitor.locationAllowed { m.addItem(withTitle: "Show Wi-Fi names (needs Location)…", action: #selector(menuLocation), keyEquivalent: "") }
         let paused = (Store.shared.state.pausedUntil ?? .distantPast) > Date()
         m.addItem(withTitle: paused ? "Resume alerts" : "Pause alerts for 1 hour", action: #selector(menuPause), keyEquivalent: "")
+        let tls = NSMenuItem(title: "Check for HTTPS interception on new networks", action: #selector(menuTLS(_:)), keyEquivalent: ""); tls.state = Store.shared.state.tlsCheck ? .on : .off; tls.toolTip = "The only connection Ledge makes: one HTTPS request to apple.com when you join a new or open network, to see who issued the certificate."; m.addItem(tls)
+        let ev = NSMenuItem(title: "Recent events", action: nil, keyEquivalent: ""); let sub = NSMenu()
+        let f = DateFormatter(); f.dateFormat = "MMM d HH:mm"
+        for e in Store.shared.state.events.suffix(12).reversed() { let it = NSMenuItem(title: "\(f.string(from: e.time))  \(e.title)", action: nil, keyEquivalent: ""); it.toolTip = e.detail; sub.addItem(it) }
+        if sub.items.isEmpty { sub.addItem(withTitle: "Nothing yet", action: nil, keyEquivalent: "") }
+        ev.submenu = sub; m.addItem(ev)
+        m.addItem(withTitle: "Open data folder", action: #selector(menuData), keyEquivalent: "")
         m.addItem(.separator())
         let login = NSMenuItem(title: "Launch at Login", action: #selector(toggleLogin(_:)), keyEquivalent: ""); login.state = SMAppService.mainApp.status == .enabled ? .on : .off; m.addItem(login)
         m.addItem(withTitle: "Quit Ledge", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
@@ -262,6 +304,8 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate {
     @objc func menuBoard() { if depth > 0 { hide() }; DispatchQueue.main.asyncAfter(deadline: .now() + (depth > 0 ? 0.4 : 0)) { self.showBoard() } }
     @objc func menuHome() { let on = monitor.toggleHome(); rebuildMenu(); show(Alert(level: .notice, title: on ? "Marked as Home" : "No longer Home", detail: on ? "New devices joining this network will be announced." : "Device alerts are off for this network.", key: "home", sticky: false)) }
     @objc func menuLocation() { loc.requestWhenInUseAuthorization() }
+    @objc func menuTLS(_ item: NSMenuItem) { Store.shared.state.tlsCheck.toggle(); Store.shared.save(); rebuildMenu() }
+    @objc func menuData() { NSWorkspace.shared.open(Store.shared.url.deletingLastPathComponent()) }
     @objc func menuPause() { let st = Store.shared; let paused = (st.state.pausedUntil ?? .distantPast) > Date(); st.state.pausedUntil = paused ? nil : Date().addingTimeInterval(3600); st.save(); rebuildMenu() }
     @objc func toggleLogin(_ item: NSMenuItem) {
         do { if SMAppService.mainApp.status == .enabled { try SMAppService.mainApp.unregister(); item.state = .off } else { try SMAppService.mainApp.register(); item.state = .on } }

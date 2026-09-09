@@ -2,7 +2,7 @@
 # Build Ledge.app (no Xcode needed). Usage: ./build.sh [--dist] && open Ledge.app
 set -e
 cd "$(dirname "$0")"
-swiftc -O -framework AppKit -framework CoreWLAN -framework CoreLocation -framework ServiceManagement -o Ledge main.swift Ledge.swift Signals.swift Store.swift Shell.swift
+swiftc -O -framework AppKit -framework CoreWLAN -framework CoreLocation -framework ServiceManagement -framework Network -framework SystemConfiguration -o Ledge main.swift Ledge.swift Signals.swift Store.swift Shell.swift
 APP=Ledge.app/Contents
 rm -rf Ledge.app; mkdir -p "$APP/MacOS" "$APP/Resources"
 cp Ledge "$APP/MacOS/Ledge"
