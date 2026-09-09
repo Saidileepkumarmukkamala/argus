@@ -378,8 +378,9 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
         title.stringValue = a.title; title.frame = NSRect(x: x0 + 62, y: yb + d - 30, width: bodyW - 120, height: 18)
         detail.stringValue = a.detail; detail.frame = NSRect(x: x0 + 62, y: yb + d - 62, width: bodyW - 120, height: 30)
         meta.stringValue = metaLine() + (queue.isEmpty ? "" : "  ·  +\(queue.count) more"); meta.textColor = c.withAlphaComponent(0.85); meta.frame = NSRect(x: x0 + 62, y: yb + 6, width: bodyW - 80, height: 13)
-        for v in [glyph, title, detail, meta] { v.isHidden = false; v.alphaValue = 0 }
-        NSAnimationContext.runAnimationGroup { ctx in ctx.duration = 0.35; for v in [glyph, title, detail, meta] { v.animator().alphaValue = 1 } }
+        // Full opacity straight away: the mask reveals the content as the shape springs open. Fading in from zero
+        // left the panel open and visibly empty for the first frames, which reads as a dark block appearing.
+        for v in [glyph, title, detail, meta] { v.isHidden = false; v.alphaValue = 1 }
         // countdown arc + warning pulse
         let dur: Double = a.sticky ? 12 : 3
         let center = CGPoint(x: x0 + bodyW - 26, y: yb + d - 37)
@@ -403,20 +404,28 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
     func hide() {
         showing = nil
         hideTimer?.invalidate(); ring.isHidden = true; pulse.isHidden = true
-        if let next = queue.first {                       // show the next one after the close settles
-            queue.removeFirst()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { [weak self] in
-                guard let s = self, s.showing == nil, s.boardViews.isEmpty else { return }
-                s.present(next)
-            }
-        }
-        NSAnimationContext.runAnimationGroup({ ctx in ctx.duration = 0.18; for v in [glyph, title, detail, meta] { v.animator().alphaValue = 0 }; boardViews.forEach { $0.animator().alphaValue = 0 } },
+        // Collapse the shape at the same time as the content fades. Fading first and collapsing afterwards left the
+        // panel open and empty for about half a second: a dark rounded block sitting over the screen, which is what
+        // this looked like from the outside.
+        let next = queue.first
+        if next == nil { setMode(idleMode) }
+        NSAnimationContext.runAnimationGroup({ ctx in ctx.duration = 0.12
+            for v in [glyph, title, detail, meta] { v.animator().alphaValue = 0 }
+            boardViews.forEach { $0.animator().alphaValue = 0 } },
             completionHandler: { [weak self] in
                 guard let s = self else { return }
-                if s.showing == nil && s.queue.isEmpty { s.setMode(s.idleMode) }   // only if nothing new claimed it
+                s.hideCardViews()
+                if s.showing == nil && s.queue.isEmpty { s.clearBoard() }
             })
-        if !statsOn { setDepth(0) }
+        if let n = next {
+            queue.removeFirst()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) { [weak self] in
+                guard let s = self, s.showing == nil else { return }
+                s.present(n)
+            }
+        }
     }
+
     func clearBoard() { boardViews.forEach { $0.removeFromSuperview() }; boardViews = [] }
 
     // MARK: status board (click)
@@ -459,11 +468,14 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
             all += [led, l, v]
         }
         let foot = label(metaLine(), size: 10, weight: .medium, color: Theme.cyan.withAlphaComponent(0.7), mono: true); foot.frame = NSRect(x: x0 + 40, y: yb + 6, width: bodyW - 60, height: 13); all.append(foot)
-        let step = min(0.008, 0.32 / Double(max(1, all.count)))      // whole cascade lands inside ~0.35 s
+        let step = min(0.006, 0.22 / Double(max(1, all.count)))
         for (i, v) in all.enumerated() {
-            view.addSubview(v); boardViews.append(v); v.alphaValue = 0
-            let f = v.frame; v.frame = f.offsetBy(dx: -8, dy: 0)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.04 + Double(i) * step) { NSAnimationContext.runAnimationGroup { ctx in ctx.duration = 0.18; v.animator().alphaValue = 1; v.animator().frame = f } }
+            view.addSubview(v); boardViews.append(v)
+            v.alphaValue = 0.35                                     // never fully invisible, so no frame is blank
+            let f = v.frame; v.frame = f.offsetBy(dx: -6, dy: 0)
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * step) {
+                NSAnimationContext.runAnimationGroup { ctx in ctx.duration = 0.16; v.animator().alphaValue = 1; v.animator().frame = f }
+            }
         }
         armHide(40)
     }
