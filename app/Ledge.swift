@@ -41,6 +41,7 @@ final class App: NSObject, NSApplicationDelegate {
     var stripSize = NSSize.zero       // visible strip in points = art size * pxPerArtPx / 2 (Retina)
     var pxPerArtPx: CGFloat = 3       // NP_SCALE: 2 crisp-small · 3 default · 4 chunky-big
     var panelSize = NSSize.zero
+    var expandGeneration = 0
     var status: NSStatusItem!
     let earOpen: CGFloat = 19, earClosed: CGFloat = 6, bottomOpen: CGFloat = 24, bottomClosed: CGFloat = 14
 
@@ -64,21 +65,21 @@ final class App: NSObject, NSApplicationDelegate {
         panelSize = NSSize(width: bodyW + 2 * earOpen, height: max(stripSize.height, notch.height + 8))
         NSLog("notch %@  strip %@ (x%.0f)  panel %@", NSStringFromRect(notch), NSStringFromSize(stripSize), pxPerArtPx, NSStringFromSize(panelSize))
 
-        // Panel is always the open size and fully transparent; only the black masked layer is visible/clickable.
-        let frame = NSRect(x: notch.midX - panelSize.width / 2, y: notch.maxY - panelSize.height, width: panelSize.width, height: panelSize.height)
-        panel = NotchPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        // Idle: the window is only the notch (plus the small ears), so nothing on screen below it loses clicks.
+        // Playing: the window grows to the open shape for the duration of the clip.
+        panel = NotchPanel(contentRect: closedRect(), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.level = NSWindow.Level(rawValue: NSWindow.Level.statusBar.rawValue + 1)
         panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
         panel.backgroundColor = .clear; panel.isOpaque = false; panel.hasShadow = false
         panel.ignoresMouseEvents = false; panel.isMovable = false
 
-        let v = ClickView(frame: NSRect(origin: .zero, size: panelSize)); v.onClick = { [weak self] in self?.playRandom() }
+        let v = ClickView(frame: NSRect(origin: .zero, size: closedRect().size)); v.onClick = { [weak self] in self?.playRandom() }
         v.wantsLayer = true
         v.layer?.backgroundColor = NSColor.black.cgColor
-        mask.path = closedPath(); v.layer?.mask = mask
+        mask.path = closedPathSmall(); v.layer?.mask = mask
         strip.magnificationFilter = .nearest; strip.minificationFilter = .nearest
         strip.contentsGravity = .resize; strip.backgroundColor = NSColor.black.cgColor
-        strip.frame = CGRect(x: ((panelSize.width - bodyW) / 2).rounded(), y: panelSize.height - stripSize.height, width: bodyW, height: stripSize.height)
+        strip.frame = .zero
         v.layer?.addSublayer(strip)
         panel.contentView = v
         panel.orderFrontRegardless()
@@ -106,6 +107,9 @@ final class App: NSObject, NSApplicationDelegate {
     }
 
     func closedPath() -> CGPath { notchPath(bodyWidth: notch.width, depth: notch.height, top: earClosed, bottom: bottomClosed, in: panelSize) }
+    func closedRect() -> NSRect { NSRect(x: notch.minX - earClosed, y: notch.minY, width: notch.width + 2 * earClosed, height: notch.height) }
+    func openRect() -> NSRect { NSRect(x: notch.midX - panelSize.width / 2, y: notch.maxY - panelSize.height, width: panelSize.width, height: panelSize.height) }
+    func closedPathSmall() -> CGPath { notchPath(bodyWidth: notch.width, depth: notch.height, top: earClosed, bottom: bottomClosed, in: closedRect().size) }
     func openPath() -> CGPath { notchPath(bodyWidth: max(stripSize.width, notch.width), depth: panelSize.height, top: earOpen, bottom: bottomOpen, in: panelSize) }
 
     func notchRect(_ s: NSScreen) -> NSRect {
@@ -142,14 +146,32 @@ final class App: NSObject, NSApplicationDelegate {
         RunLoop.main.add(frameTimer!, forMode: .common)
     }
 
-    /// Morph the silhouette between the hardware notch and the open strip. Same segment count both ways, so it tweens cleanly.
+    /// Morph the silhouette between the hardware notch and the open strip. The window itself is resized around it:
+    /// grown before opening, shrunk back to the notch after the close animation settles.
     func expand(_ open: Bool) {
+        let bodyW = max(stripSize.width, notch.width)
+        if open {
+            panel.setFrame(openRect(), display: false)
+            panel.contentView?.frame = NSRect(origin: .zero, size: panelSize)
+            strip.frame = CGRect(x: ((panelSize.width - bodyW) / 2).rounded(), y: panelSize.height - stripSize.height, width: bodyW, height: stripSize.height)
+            mask.removeAllAnimations(); mask.path = closedPath()
+        }
         let to = open ? openPath() : closedPath()
         let anim = CASpringAnimation(keyPath: "path")
         anim.fromValue = mask.presentation()?.path ?? mask.path; anim.toValue = to
         anim.damping = 18; anim.stiffness = 260; anim.mass = 1; anim.initialVelocity = 0
         anim.duration = anim.settlingDuration
         mask.add(anim, forKey: "morph"); mask.path = to
+        if !open {
+            let gen = expandGeneration + 1; expandGeneration = gen
+            DispatchQueue.main.asyncAfter(deadline: .now() + anim.settlingDuration) { [weak self] in
+                guard let s = self, s.expandGeneration == gen, s.frameTimer == nil else { return }
+                s.panel.setFrame(s.closedRect(), display: false)
+                s.panel.contentView?.frame = NSRect(origin: .zero, size: s.closedRect().size)
+                s.strip.frame = .zero
+                s.mask.removeAllAnimations(); s.mask.path = s.closedPathSmall()
+            }
+        }
     }
 }
 
