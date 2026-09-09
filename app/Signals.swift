@@ -334,8 +334,13 @@ final class Monitor {
             if let src = SCDynamicStoreCreateRunLoopSource(nil, store, 0) { CFRunLoopAddSource(CFRunLoopGetMain(), src, .commonModes) }
             dynStore = store
         }
-        let fast = ProcessInfo.processInfo.environment["ARGUS_FAST"] != nil          // test knob: minute timers become seconds
-        schedule(fast ? 15 : 60) { self.fastTick() }; schedule(fast ? 15 : 60) { self.mediumTick() }; schedule(fast ? 60 : 300) { self.slowTick() }; schedule(fast ? 30 : 600) { self.integrityTick(first: false) }
+        // Network, DNS and proxy changes arrive as system events, so these timers are a safety net rather than the
+        // mechanism. Keeping them infrequent is what keeps idle CPU near zero: every tick spawns short-lived tools.
+        let fast = ProcessInfo.processInfo.environment["ARGUS_FAST"] != nil          // test knob: minutes become seconds
+        schedule(fast ? 15 : 300) { self.fastTick() }        // backstop; poke() does the real work
+        schedule(fast ? 15 : 120) { self.mediumTick() }      // a process starting to listen has no event to hook
+        schedule(fast ? 60 : 600) { self.slowTick() }        // home-network device sweep
+        schedule(fast ? 30 : 1800) { self.integrityTick(first: false) }
         let fresh = Store.shared.state.networks.isEmpty
         refreshPosture()
         q.async { self.fastTick(); self.mediumTick(first: true); self.integrityTick(first: true)

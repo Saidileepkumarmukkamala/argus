@@ -19,6 +19,7 @@ struct State: Codable {
     var tlsCheck: Bool = false               // optional: verify HTTPS to apple.com on new networks (the only connection Argus ever makes)
     var fileHashes: [String: String] = [:]   // authorized_keys, crontab, shell rc
     var sysExtensions: [String] = []
+    var alwaysOn: Bool = false               // keep the live stats strip under the notch
 }
 struct EventRecord: Codable { var time: Date; var title: String; var detail: String; var level: String }
 
@@ -37,13 +38,20 @@ final class Store {
     func save() { if let d = try? JSONEncoder().encode(state) { try? d.write(to: url) } }
 }
 
-/// MAC prefix -> vendor, from the bundled IEEE OUI list.
+/// MAC prefix -> vendor, from the bundled IEEE OUI list. Forty thousand entries are only needed the first time an
+/// unrecognised device turns up on a home network, so the table is loaded on demand rather than at launch.
 final class Vendors {
     static let shared = Vendors()
-    var table: [String: String] = [:]
-    init() {
+    private var loaded: [String: String]?
+    private let lock = NSLock()
+    private var table: [String: String] {
+        lock.lock(); defer { lock.unlock() }
+        if let t = loaded { return t }
+        var t: [String: String] = [:]
         if let u = Bundle.main.url(forResource: "oui", withExtension: "json"), let d = try? Data(contentsOf: u),
-           let t = try? JSONDecoder().decode([String: String].self, from: d) { table = t }
+           let parsed = try? JSONDecoder().decode([String: String].self, from: d) { t = parsed }
+        loaded = t
+        return t
     }
     func lookup(_ mac: String) -> String {
         let parts = mac.split(separator: ":").map { String(format: "%02X", Int($0, radix: 16) ?? 0) }

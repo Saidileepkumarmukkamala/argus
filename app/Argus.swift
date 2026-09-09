@@ -35,6 +35,15 @@ func notchPath(bodyWidth: CGFloat, depth: CGFloat, top: CGFloat, bottom: CGFloat
 final class ClickView: NSView {
     var onClick: (() -> Void)?
     var onHover: ((Bool) -> Void)?
+    /// x-range (in this view's coordinates) of the real notch, and the height of the menu bar row.
+    var notchSpan: (CGFloat, CGFloat) = (0, 0)
+    var menuBarHeight: CGFloat = 0
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        // Points in the menu bar row but outside the notch belong to the menu bar, not to us.
+        let topBand = bounds.maxY - menuBarHeight
+        if point.y >= topBand, point.x < notchSpan.0 || point.x > notchSpan.1 { return nil }
+        return super.hitTest(point)
+    }
     private var tracking: NSTrackingArea?
     override func mouseDown(with e: NSEvent) { onClick?() }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
@@ -116,6 +125,12 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
     var boardViews: [NSView] = []
     var queue: [Alert] = []            // alerts that arrived while one was on screen
     var showing: Alert?
+    // always-on strip
+    let stats = StatsReader()
+    var statsTimer: Timer?
+    var statsViews: [NSTextField] = []
+    var statsOn: Bool { Store.shared.state.alwaysOn }
+    let statsDepth: CGFloat = 26, statsWidth: CGFloat = 430
 
     func applicationDidFinishLaunching(_ n: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -167,8 +182,12 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
         }
         tintTimer = Timer.scheduledTimer(withTimeInterval: 1800, repeats: true) { [weak self] _ in self?.refreshTint() }
         // Click anywhere else on the screen: close. (Mouse monitors need no permissions; key monitors would.)
-        NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in if let s = self, s.depth > 0 { s.hide() } }
+        NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
+            guard let s = self, s.depth > 0, !s.boardViews.isEmpty || s.showing != nil else { return }
+            s.hide()
+        }
         DispatchQueue.main.asyncAfter(deadline: .now() + 20) { self.refreshTint() }
+        if statsOn { DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { self.startStats() } }
         if ProcessInfo.processInfo.environment["ARGUS_DEMO"] != nil { demo() }
     }
 
@@ -233,6 +252,7 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
     func setDepth(_ d: CGFloat, width: CGFloat? = nil) {
         gen += 1; let g = gen
         if let w = width { bodyW = w }
+        defer { syncHitRegion() }
         let size = openSize(max(d, depth))
         if d > 0 {
             panel.setFrame(openRect(max(d, depth)), display: false); view.frame = NSRect(origin: .zero, size: size)
@@ -305,6 +325,7 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
     }
     func present(_ a: Alert) {
         showing = a
+        statsViews.forEach { $0.isHidden = true }
         clearBoard()
         let d: CGFloat = 78, c = tone(a.level)
         setDepth(d, width: cardW)
@@ -348,8 +369,9 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
             }
         }
         NSAnimationContext.runAnimationGroup({ ctx in ctx.duration = 0.18; for v in [glyph, title, detail, meta] { v.animator().alphaValue = 0 }; boardViews.forEach { $0.animator().alphaValue = 0 } },
-            completionHandler: { for v in [self.glyph, self.title, self.detail, self.meta] { v.isHidden = true }; self.clearBoard() })
-        setDepth(0)
+            completionHandler: { for v in [self.glyph, self.title, self.detail, self.meta] { v.isHidden = true }; self.clearBoard()
+                                 self.restoreStatsOrClose() })
+        if !statsOn { setDepth(0) }
     }
     func clearBoard() { boardViews.forEach { $0.removeFromSuperview() }; boardViews = [] }
 
@@ -374,6 +396,7 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
     }
 
     func renderBoard(rows: [Collect.PostureRow], scanning: Bool) {
+        statsViews.forEach { $0.isHidden = true }
         clearBoard()
         let rowH: CGFloat = 20, perCol = max(1, (rows.count + 1) / 2), d = CGFloat(perCol) * rowH + 52
         setDepth(d, width: boardW)
@@ -400,7 +423,77 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
         }
         armHide(40)
     }
-    func clicked() { if depth > 0 { hide() } else { showBoard() } }
+    func clicked() {
+        if !boardViews.isEmpty || showing != nil { hide() }        // something is being shown: dismiss it
+        else { showBoard() }                                        // idle, or the always-on strip: open the board
+    }
+
+    /// The notch's x-range inside the panel, so clicks on the menu bar either side pass straight through.
+    func syncHitRegion() {
+        guard let v = view else { return }
+        let mid = v.bounds.width / 2
+        v.notchSpan = (mid - notch.width / 2, mid + notch.width / 2)
+        v.menuBarHeight = notch.height
+    }
+
+    // MARK: always-on strip
+    /// A permanently open, shallow band under the notch showing live CPU, memory, throughput and Wi-Fi. It yields to
+    /// alerts and the board, and restores itself when they close.
+    func startStats() {
+        stopStats(clearing: false)
+        guard statsOn else { return }
+        buildStatsViews()
+        renderStats()
+        statsTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in self?.renderStats() }
+        RunLoop.main.add(statsTimer!, forMode: .common)
+    }
+    func stopStats(clearing: Bool = true) {
+        statsTimer?.invalidate(); statsTimer = nil
+        if clearing { statsViews.forEach { $0.removeFromSuperview() }; statsViews = [] }
+    }
+    private func buildStatsViews() {
+        statsViews.forEach { $0.removeFromSuperview() }; statsViews = []
+        for _ in 0..<4 {
+            let l = label("", size: 10.5, weight: .medium, color: Theme.dim, mono: true)
+            view.addSubview(l); statsViews.append(l)
+        }
+    }
+    private func renderStats() {
+        guard statsOn, showing == nil, boardViews.isEmpty else { return }
+        if depth != statsDepth || bodyW != statsWidth { setDepth(statsDepth, width: statsWidth) }
+        syncHitRegion()
+        if statsViews.count < 4 { buildStatsViews() }
+        let s = stats.read(interface: monitor.net.iface.isEmpty ? "en0" : monitor.net.iface)
+        let size = openSize(statsDepth), x0 = (size.width - statsWidth) / 2
+        let bars = StatsReader.bars(s.rssi)
+        let wifiCell: String
+        if s.wifi {
+            let meter = String(repeating: "▮", count: bars) + String(repeating: "▯", count: 4 - bars)
+            wifiCell = s.txRate > 0 ? String(format: "%@ %.0fM", meter, s.txRate) : meter
+        } else { wifiCell = monitor.net.online ? "WIRED" : "OFFLINE" }
+        let cells: [(String, NSColor)] = [
+            (String(format: "CPU %.0f%%", s.cpu * 100), s.cpu > 0.8 ? Theme.amber : Theme.cyan),
+            (String(format: "MEM %.1fG", s.memGB), s.memUsed > 0.9 ? Theme.amber : Theme.dim),
+            ("↓" + StatsReader.rate(s.down) + "  ↑" + StatsReader.rate(s.up), Theme.dim),
+            (wifiCell, s.wifi && bars <= 1 ? Theme.amber : Theme.dim)
+        ]
+        let w = (statsWidth - 28) / 4
+        for (i, (text, colour)) in cells.enumerated() {
+            let l = statsViews[i]
+            l.stringValue = text; l.textColor = colour; l.font = NSFont.monospacedSystemFont(ofSize: 9.5, weight: .medium)
+            l.frame = NSRect(x: x0 + 14 + CGFloat(i) * w, y: statsDepth / 2 - 8, width: w - 2, height: 15)
+            l.alignment = i == 0 ? .left : (i == 3 ? .right : .center)
+            l.isHidden = false
+        }
+    }
+    /// Called whenever an alert or the board finishes, so the strip comes back.
+    func restoreStatsOrClose() {
+        guard statsOn else { setDepth(0); return }
+        statsViews.forEach { $0.isHidden = false }
+        setDepth(statsDepth, width: statsWidth)     // unconditional: the board leaves the panel at its own size
+        renderStats()
+        if statsTimer == nil { startStats() }        // the ticker must never be left stopped
+    }
 
     // MARK: menu
     func rebuildMenu() {
@@ -416,6 +509,10 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
         if !monitor.locationAllowed { m.addItem(withTitle: "Show Wi-Fi names (needs Location)…", action: #selector(menuLocation), keyEquivalent: "") }
         let paused = (Store.shared.state.pausedUntil ?? .distantPast) > Date()
         m.addItem(withTitle: paused ? "Resume alerts" : "Pause alerts for 1 hour", action: #selector(menuPause), keyEquivalent: "")
+        let ao = NSMenuItem(title: "Always-on stats", action: #selector(menuAlwaysOn(_:)), keyEquivalent: "")
+        ao.state = statsOn ? .on : .off
+        ao.toolTip = "Keep a live strip under the notch showing CPU, memory, network throughput and Wi-Fi signal"
+        m.addItem(ao)
         let tls = NSMenuItem(title: "Check for HTTPS interception on new networks", action: #selector(menuTLS(_:)), keyEquivalent: ""); tls.state = Store.shared.state.tlsCheck ? .on : .off; tls.toolTip = "The only connection Argus makes: one HTTPS request to apple.com when you join a new or open network, to see who issued the certificate."; m.addItem(tls)
         let ev = NSMenuItem(title: "Recent events", action: nil, keyEquivalent: ""); let sub = NSMenu()
         let f = DateFormatter(); f.dateFormat = "MMM d HH:mm"
@@ -446,6 +543,11 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
                               : "Device announcements are off for this network.", key: "home", sticky: false))
     }
     @objc func menuLocation() { loc.requestWhenInUseAuthorization() }
+    @objc func menuAlwaysOn(_ item: NSMenuItem) {
+        Store.shared.state.alwaysOn.toggle(); Store.shared.save(); rebuildMenu()
+        if statsOn { startStats() }
+        else { stopStats(); if showing == nil && boardViews.isEmpty { setDepth(0) } }
+    }
     @objc func menuTLS(_ item: NSMenuItem) {
         Store.shared.state.tlsCheck.toggle(); Store.shared.save(); rebuildMenu(); syncIcon()
         let on = Store.shared.state.tlsCheck
