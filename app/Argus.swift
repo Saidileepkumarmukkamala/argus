@@ -168,10 +168,6 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
         tintTimer = Timer.scheduledTimer(withTimeInterval: 1800, repeats: true) { [weak self] _ in self?.refreshTint() }
         // Click anywhere else on the screen: close. (Mouse monitors need no permissions; key monitors would.)
         NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in if let s = self, s.depth > 0 { s.hide() } }
-        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] e in
-            if e.keyCode == 53, let s = self, s.depth > 0 { s.hide(); return nil }      // Escape
-            return e
-        }
         DispatchQueue.main.asyncAfter(deadline: .now() + 20) { self.refreshTint() }
         if ProcessInfo.processInfo.environment["ARGUS_DEMO"] != nil { demo() }
     }
@@ -261,6 +257,12 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
     /// One scan feeds both the board and the menu bar tint; never a second pass.
     func refreshTint() { monitor.refreshPosture { [weak self] rows in self?.applyTint(rows) } }
     func applyTint(_ rows: [Collect.PostureRow]) {
+        if let p = Store.shared.state.pausedUntil, p > Date() {
+            status.button?.image = Self.shieldIcon(Self.systemIsDark() ? NSColor(white: 1, alpha: 0.38) : NSColor(white: 0, alpha: 0.38))
+            let f = DateFormatter(); f.dateFormat = "HH:mm"
+            status.button?.toolTip = "Argus — alerts paused until \(f.string(from: p))"
+            return
+        }
         let bad = rows.filter { !$0.ok }.count
         // The shield is always the menu bar's own colour so it is never invisible; attention is an amber dot on it.
         status.button?.image = Self.shieldIcon(Self.systemIsDark() ? .white : .black, badge: bad > 0)
@@ -404,15 +406,24 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
     func rebuildMenu() {
         let m = NSMenu()
         m.addItem(withTitle: "Show status", action: #selector(menuBoard), keyEquivalent: "")
-        let home = Store.shared.state.networks[monitor.net.key]?.isHome ?? false
-        m.addItem(withTitle: home ? "This network is Home ✓  (click to unmark)" : "Mark this network as Home", action: #selector(menuHome), keyEquivalent: "")
+        let rec = Store.shared.state.networks[monitor.net.key]
+        let netName = rec?.name ?? monitor.net.displayName
+        let home = rec?.isHome ?? false
+        let item = NSMenuItem(title: home ? "\(netName) is Home ✓" : "Mark \(netName) as Home", action: #selector(menuHome), keyEquivalent: "")
+        item.toolTip = home ? "Click to stop treating this network as Home" : "Argus will announce new devices that join this network"
+        item.isEnabled = monitor.net.online
+        m.addItem(item)
         if !monitor.locationAllowed { m.addItem(withTitle: "Show Wi-Fi names (needs Location)…", action: #selector(menuLocation), keyEquivalent: "") }
         let paused = (Store.shared.state.pausedUntil ?? .distantPast) > Date()
         m.addItem(withTitle: paused ? "Resume alerts" : "Pause alerts for 1 hour", action: #selector(menuPause), keyEquivalent: "")
         let tls = NSMenuItem(title: "Check for HTTPS interception on new networks", action: #selector(menuTLS(_:)), keyEquivalent: ""); tls.state = Store.shared.state.tlsCheck ? .on : .off; tls.toolTip = "The only connection Argus makes: one HTTPS request to apple.com when you join a new or open network, to see who issued the certificate."; m.addItem(tls)
         let ev = NSMenuItem(title: "Recent events", action: nil, keyEquivalent: ""); let sub = NSMenu()
         let f = DateFormatter(); f.dateFormat = "MMM d HH:mm"
-        for e in Store.shared.state.events.suffix(12).reversed() { let it = NSMenuItem(title: "\(f.string(from: e.time))  \(e.title)", action: nil, keyEquivalent: ""); it.toolTip = e.detail; sub.addItem(it) }
+        for (i, e) in Store.shared.state.events.suffix(12).reversed().enumerated() {
+            let it = NSMenuItem(title: "\(f.string(from: e.time))  \(e.title)", action: #selector(menuReplay(_:)), keyEquivalent: "")
+            it.toolTip = e.detail; it.tag = Store.shared.state.events.count - 1 - i; it.target = self
+            sub.addItem(it)
+        }
         if sub.items.isEmpty { sub.addItem(withTitle: "Nothing yet", action: nil, keyEquivalent: "") }
         ev.submenu = sub; m.addItem(ev)
         m.addItem(withTitle: "Open data folder", action: #selector(menuData), keyEquivalent: "")
@@ -422,16 +433,72 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
         status.menu = m
     }
     @objc func menuBoard() { showBoard() }
-    @objc func menuHome() { let on = monitor.toggleHome(); rebuildMenu(); show(Alert(level: .notice, title: on ? "Marked as Home" : "No longer Home", detail: on ? "New devices joining this network will be announced." : "Device alerts are off for this network.", key: "home", sticky: false)) }
-    @objc func menuLocation() { loc.requestWhenInUseAuthorization() }
-    @objc func menuTLS(_ item: NSMenuItem) { Store.shared.state.tlsCheck.toggle(); Store.shared.save(); rebuildMenu() }
-    @objc func menuData() { NSWorkspace.shared.open(Store.shared.url.deletingLastPathComponent()) }
-    @objc func menuPause() { let st = Store.shared; let paused = (st.state.pausedUntil ?? .distantPast) > Date(); st.state.pausedUntil = paused ? nil : Date().addingTimeInterval(3600); st.save(); rebuildMenu() }
-    @objc func toggleLogin(_ item: NSMenuItem) {
-        do { if SMAppService.mainApp.status == .enabled { try SMAppService.mainApp.unregister(); item.state = .off } else { try SMAppService.mainApp.register(); item.state = .on } }
-        catch { NSLog("launch at login: %@", error.localizedDescription) }
+    /// Keep the menu bar icon honest after any action that changes what it should say.
+    func syncIcon() { applyTint(monitor.cachedPosture) }
+    @objc func menuHome() {
+        guard monitor.net.online else {
+            show(Alert(level: .notice, title: "No network", detail: "Join a network first, then mark it as Home.", key: "home", sticky: false)); return
+        }
+        let on = monitor.toggleHome(); rebuildMenu()
+        let name = Store.shared.state.networks[monitor.net.key]?.name ?? monitor.net.displayName
+        show(Alert(level: .notice, title: on ? "\(name) is now Home" : "\(name) is no longer Home",
+                   detail: on ? "Argus will announce devices that join this network, and stay quieter about it otherwise."
+                              : "Device announcements are off for this network.", key: "home", sticky: false))
     }
-    func locationManagerDidChangeAuthorization(_ m: CLLocationManager) { monitor.locationAllowed = m.authorizationStatus == .authorizedAlways || m.authorizationStatus == .authorized; rebuildMenu() }
+    @objc func menuLocation() { loc.requestWhenInUseAuthorization() }
+    @objc func menuTLS(_ item: NSMenuItem) {
+        Store.shared.state.tlsCheck.toggle(); Store.shared.save(); rebuildMenu(); syncIcon()
+        let on = Store.shared.state.tlsCheck
+        present(Alert(level: .notice, title: on ? "HTTPS check on" : "HTTPS check off",
+                      detail: on ? "When you join a new or open network, Argus will make one HTTPS request to apple.com and check who issued the certificate. It is the only connection Argus ever makes."
+                                 : "Argus now makes no network connections at all.", key: "tls", sticky: false))
+    }
+    @objc func menuData() { NSWorkspace.shared.open(Store.shared.url.deletingLastPathComponent()) }
+    /// Re-show a past event, so the Recent list is readable rather than a dead label.
+    @objc func menuReplay(_ item: NSMenuItem) {
+        let evs = Store.shared.state.events
+        guard item.tag >= 0, item.tag < evs.count else { return }
+        let e = evs[item.tag]
+        let lvl: Level = e.level == "warning" ? .warning : .notice
+        showing = nil; queue.removeAll()
+        present(Alert(level: lvl, title: e.title, detail: e.detail, key: "replay", sticky: false))
+    }
+    @objc func menuPause() {
+        let st = Store.shared
+        let paused = (st.state.pausedUntil ?? .distantPast) > Date()
+        st.state.pausedUntil = paused ? nil : Date().addingTimeInterval(3600); st.save(); rebuildMenu(); syncIcon()
+        let f = DateFormatter(); f.dateFormat = "HH:mm"
+        let until = st.state.pausedUntil.map { f.string(from: $0) } ?? "later"
+        // Shown directly, not through emit(), which is exactly what a pause suppresses.
+        present(Alert(level: .notice, title: paused ? "Alerts resumed" : "Alerts paused",
+                      detail: paused ? "Argus will speak up again when something changes."
+                                     : "Nothing will be shown until \(until). The status board still works.",
+                      key: "pause", sticky: false))
+    }
+    @objc func toggleLogin(_ item: NSMenuItem) {
+        let wasOn = SMAppService.mainApp.status == .enabled
+        do {
+            if wasOn { try SMAppService.mainApp.unregister() } else { try SMAppService.mainApp.register() }
+            item.state = wasOn ? .off : .on
+            show(Alert(level: .notice, title: wasOn ? "Launch at login off" : "Launch at login on",
+                       detail: wasOn ? "Argus will not start itself again." : "Argus will start quietly when you log in.",
+                       key: "login", sticky: false))
+        } catch {
+            // The usual cause is running from somewhere macOS will not register, such as Downloads or a disk image.
+            let inApps = Bundle.main.bundlePath.hasPrefix("/Applications")
+            show(Alert(level: .warning, title: "Could not set launch at login",
+                       detail: inApps ? error.localizedDescription : "Move Argus into your Applications folder and try again.",
+                       key: "login-fail", sticky: false))
+        }
+    }
+    func locationManagerDidChangeAuthorization(_ m: CLLocationManager) {
+        let ok = m.authorizationStatus == .authorizedAlways || m.authorizationStatus == .authorized
+        monitor.locationAllowed = ok           // this pokes the monitor, so the name appears at once
+        rebuildMenu()
+        if ok { DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
+            guard let s = self, let name = s.monitor.net.ssid else { return }
+            s.show(Alert(level: .notice, title: "Network names are on", detail: "This network is \(name). Argus can label networks by name from now on.", key: "loc-ok", sticky: false)) } }
+    }
 
     func demo() {
         let samples: [Alert] = [

@@ -1,0 +1,78 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Free macOS notch apps worth installing (2026)</title>
+<meta name="description" content="An honest guide to the free and open-source apps that use the MacBook notch: boring.notch, NotchDrop, Notchmeister, NotchNook and Argus, and which one to pick.">
+<link rel="canonical" href="free-macos-notch-apps.html">
+<link rel="icon" href="../assets/icon.png"><link rel="stylesheet" href="../style.css">
+<meta property="og:type" content="article"><meta property="og:title" content="Free macOS notch apps worth installing (2026)">
+<meta property="og:description" content="An honest guide to the free and open-source apps that use the MacBook notch: boring.notch, NotchDrop, Notchmeister, NotchNook and Argus, and which one to pick."><meta property="og:url" content="https://saidileepkumarmukkamala.github.io/argus/blog/free-macos-notch-apps.html">
+<meta property="og:image" content="https://saidileepkumarmukkamala.github.io/argus/assets/icon.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#030407">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "BlogPosting", "headline": "Free macOS notch apps worth installing", "description": "An honest guide to the free and open-source apps that use the MacBook notch: boring.notch, NotchDrop, Notchmeister, NotchNook and Argus, and which one to pick.", "datePublished": "2026-09-09", "dateModified": "2026-09-09", "author": {"@type": "Person", "name": "Sai Mukkamala"}, "publisher": {"@type": "Organization", "name": "Argus"}, "mainEntityOfPage": {"@type": "WebPage", "@id": "https://saidileepkumarmukkamala.github.io/argus/blog/free-macos-notch-apps.html"}}</script>
+</head><body>
+<div class="mesh"><i></i><i></i></div><div class="grain"></div>
+<div class="navwrap"><nav class="nav">
+  <a class="mark" href="../">Argus<s>.</s></a>
+  <a class="lk" href="../#signals">Signals</a><a class="lk" href="">Writing</a>
+  <a class="pill" href="https://saidileepkumarmukkamala.github.io/argus/releases">Download</a>
+</nav></div>
+<article class="doc">
+<div class="kicker">Guide</div>
+<h1>Free macOS notch apps worth installing</h1>
+<p class="lede">The notch is dead space. A handful of apps put it to work, and they are not trying to do the same thing.</p>
+<div class="meta">2026-09-09 · Argus</div>
+
+<p>The notch on a MacBook Pro or Air is dead space. Apple uses the strips either side of it for the menu bar and leaves the rest alone. A small group of apps have grown up to put that space to work, and they fall into three quite different camps.</p>
+<p>This is an honest list. I build one of these apps, and I have said plainly where the others are better.</p>
+
+<h2>Dynamic Island style: media, drops and shortcuts</h2>
+<h3>boring.notch</h3>
+<p><strong>Free, open source (GPL-3.0).</strong> The most complete of the free ones. It turns the notch into a media controller with album art and a live audio spectrum, adds a shelf you can drag files onto, shows battery and charging state, and has a calendar peek. It is actively developed and has by far the largest user base of the open-source notch apps.</p>
+<p>The trade-off is weight. It is a large app with a lot of moving parts, and the more features you enable the more it wants to be running.</p>
+
+<h3>NotchDrop</h3>
+<p><strong>Free, open source (MIT).</strong> Much narrower and much lighter. Hover the notch, a tray opens, drop files into it, drag them out somewhere else later. It is the AirDrop-adjacent idea done well. If the only thing you want is a temporary shelf, this is the cleaner choice.</p>
+
+<h3>NotchNook</h3>
+<p><strong>Paid.</strong> The polished commercial option, with media, file shelf, notes, and a general "control centre" feel. Closed source. If you want the most finished experience and do not mind paying, it is the one people usually land on.</p>
+
+<h2>Toys</h2>
+<h3>Notchmeister</h3>
+<p><strong>Free, open source (BSD-3), from the Iconfactory.</strong> It does nothing useful on purpose. Move your cursor near the notch and it reacts: sparks, googly eyes, a little tractor beam. It is also, quietly, the best-written reference for how to draw and animate inside the notch, and it is on the Mac App Store, which proves a notch overlay can pass App Review.</p>
+
+<h2>Utilities: the notch as a status surface</h2>
+<h3>Argus</h3>
+<p><strong>Free, open source.</strong> This is mine, so treat the description as a spec rather than a review. It uses the notch as a warning light. When you join an open Wi-Fi network, when your VPN drops, when a dev server you started becomes reachable by everyone on the café network, when a new device joins your home network, when something new is set to run at login, it opens and says so in one plain sentence. Clicking it shows a board of twenty-four security settings.</p>
+<p>It does not block anything and it is not antivirus. It reads your Mac's own state and the shape of the network you are on, and it makes no network connections at all.</p>
+
+<h2>Which one to install</h2>
+<ul>
+<li><strong>You want media controls and a file shelf:</strong> boring.notch, or NotchNook if you would rather pay for polish.</li>
+<li><strong>You only want the file shelf:</strong> NotchDrop.</li>
+<li><strong>You want your laptop to be a bit delightful:</strong> Notchmeister.</li>
+<li><strong>You travel and use other people's Wi-Fi:</strong> Argus.</li>
+</ul>
+<p>They coexist fine, with one caveat: two apps both trying to expand over the notch will fight over the same few hundred pixels. Media apps and status apps overlap the least, because a status app is silent almost all the time.</p>
+
+<h2>A note on installing unsigned Mac apps</h2>
+<p>Several of these, including mine, are not notarized by Apple, because notarizing requires a paid developer account that free projects often do not have. On macOS 15 and later the old Control-click then Open shortcut no longer works. You either clear the download flag from Terminal:</p>
+<pre><code>xattr -dr com.apple.quarantine /Applications/YourApp.app</code></pre>
+<p>or open the app once, then go to System Settings, Privacy &amp; Security, scroll to the bottom and click <strong>Open Anyway</strong>.</p>
+<p>Only do this for apps whose source you can read or whose author you trust. That is the whole reason these projects publish their source and their checksums.</p>
+
+<div class="cta"><div>
+<h3>Argus watches this for you</h3>
+<p>A free, open-source Mac app that tells you in plain English when your network or your Mac's exposure changes. It lives in the notch, makes no network connections, and weighs 655&nbsp;KB.</p>
+<a class="pill" href="https://github.com/Saidileepkumarmukkamala/argus/releases/latest/download/Argus.zip">Download for Mac</a>
+</div></div>
+</article>
+<footer><div class="fmark">ARGUS</div>
+<div class="fin">
+ <div class="fb"><span class="mark">Argus<s>.</s></span><p>A plain-English narrator for what changed about your network and your Mac's exposure. Free and open source.</p></div>
+ <div class="fc"><h5>Product</h5><a href="../">Overview</a><a href="../#signals">Signals</a><a href="../#limits">Limits</a><a href="../#compare">Comparison</a></div>
+ <div class="fc"><h5>Writing</h5><a href="">All posts</a><a href="free-macos-notch-apps.html">Notch apps</a><a href="public-wifi-safety-mac.html">Public Wi-Fi</a><a href="free-mac-security-tools.html">Free Mac tools</a></div>
+ <div class="fc"><h5>Project</h5><a href="https://github.com/Saidileepkumarmukkamala/argus">Source</a><a href="https://github.com/Saidileepkumarmukkamala/argus/issues">Report a bug</a><a href="https://github.com/Saidileepkumarmukkamala/argus/releases">Releases</a></div>
+</div>
+<div class="fbot"><span>© 2026 Argus. Free and open source.</span><span class="sp"><span>Not affiliated with Apple.</span></span></div></footer>
+</body></html>

@@ -17,8 +17,8 @@ cat > "$APP/Info.plist" <<PLIST
  <key>CFBundleIdentifier</key><string>app.argus.mac</string>
  <key>CFBundleExecutable</key><string>Argus</string>
  <key>CFBundlePackageType</key><string>APPL</string>
- <key>CFBundleShortVersionString</key><string>1.1.0</string>
- <key>CFBundleVersion</key><string>12</string>
+ <key>CFBundleShortVersionString</key><string>1.2.0</string>
+ <key>CFBundleVersion</key><string>13</string>
  <key>LSMinimumSystemVersion</key><string>14.0</string>
  <key>LSUIElement</key><true/>
  <key>NSHighResolutionCapable</key><true/>

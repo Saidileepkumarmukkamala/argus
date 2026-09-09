@@ -9,6 +9,11 @@
 <meta property="og:title" content="Argus — know what changed, from the notch">
 <meta property="og:description" content="Plain-English alerts when your network or your Mac's exposure changes. Free, open source, offline.">
 <meta property="og:image" content="assets/icon.png">
+<link rel="canonical" href="https://saidileepkumarmukkamala.github.io/argus/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="alternate" type="application/rss+xml" title="Argus" href="https://saidileepkumarmukkamala.github.io/argus/blog/">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "Argus", "applicationCategory": "SecurityApplication", "operatingSystem": "macOS 14.0 or later", "description": "A free, open-source macOS app that tells you in plain English when your network or your Mac's exposure changes.", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "downloadUrl": "https://github.com/Saidileepkumarmukkamala/argus/releases/latest/download/Argus.zip", "softwareVersion": "1.2.0", "license": "https://github.com/Saidileepkumarmukkamala/argus", "url": "https://saidileepkumarmukkamala.github.io/argus", "image": "https://saidileepkumarmukkamala.github.io/argus/assets/icon.png", "author": {"@type": "Person", "name": "Sai Mukkamala"}}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "Is Argus free?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. Argus is free and open source. There is no account, no telemetry and no paid tier."}}, {"@type": "Question", "name": "Does Argus block network traffic?", "acceptedAnswer": {"@type": "Answer", "text": "No. Blocking requires Apple's network-extension entitlement, which needs a paid developer account. Argus tells you what changed; tools such as LuLu and Little Snitch do the blocking."}}, {"@type": "Question", "name": "Does Argus send my data anywhere?", "acceptedAnswer": {"@type": "Answer", "text": "No. Argus makes no network connections at all, apart from one optional HTTPS request to apple.com that is off by default and is used to detect HTTPS interception."}}, {"@type": "Question", "name": "Why does macOS block Argus on first launch?", "acceptedAnswer": {"@type": "Answer", "text": "Argus is not notarized, because notarizing requires a paid Apple Developer account. Run xattr -dr com.apple.quarantine /Applications/Argus.app, or open it once and use System Settings, Privacy and Security, Open Anyway."}}, {"@type": "Question", "name": "Which Macs does Argus work on?", "acceptedAnswer": {"@type": "Answer", "text": "macOS 14 or later on Apple silicon. On Macs without a notch it draws its own panel at the top of the screen."}}]}</script>
 <meta name="theme-color" content="#030407">
 <style>
 @font-face{font-family:Grotesk;src:url(fonts/SpaceGrotesk.ttf) format('truetype-variations');font-weight:300 700;font-display:swap}
@@ -220,7 +225,7 @@ footer{margin-top:150px;border-top:1px solid rgba(255,255,255,.06);position:rela
 <div class="navwrap"><nav class="nav" id="nav">
   <span class="mark">Argus<s>.</s></span>
   <a class="lk" href="#signals">Signals</a><a class="lk" href="#status">Status</a>
-  <a class="lk" href="#limits">Limits</a><a class="lk" href="#compare">Compare</a>
+  <a class="lk" href="#limits">Limits</a><a class="lk" href="#compare">Compare</a><a class="lk" href="blog/">Writing</a>
   <a class="pill" href="https://github.com/Saidileepkumarmukkamala/argus/releases/latest/download/Argus.zip">Download
     <s><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v13m0 0l-5-5m5 5l5-5"/></svg></s></a>
 </nav></div>
@@ -235,7 +240,7 @@ footer{margin-top:150px;border-top:1px solid rgba(255,255,255,.06);position:rela
         <s><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v13m0 0l-5-5m5 5l5-5"/></svg></s></a>
       <a class="ghost" href="https://github.com/Saidileepkumarmukkamala/argus">Read the source</a>
     </div>
-    <div class="fine">655 KB · no account · no telemetry · makes no network connections</div>
+    <div class="fine">668 KB · no account · no telemetry · makes no network connections</div>
   </div>
 </div>
 
@@ -335,6 +340,7 @@ cd argus/app &amp;&amp; ./build.sh &amp;&amp; open Argus.app</pre></div></div>
     <div class="fc"><h5>Get it</h5>
       <a href="https://github.com/Saidileepkumarmukkamala/argus/releases/latest/download/Argus.zip">Download</a>
       <a href="https://github.com/Saidileepkumarmukkamala/argus/releases">Releases</a><a href="#install">Install guide</a><a href="#verify">Build from source</a></div>
+    <div class="fc"><h5>Writing</h5><a href="blog/">All posts</a><a href="blog/free-macos-notch-apps.html">Notch apps</a><a href="blog/public-wifi-safety-mac.html">Public Wi-Fi</a><a href="blog/mac-security-settings-checklist.html">Settings checklist</a></div>
     <div class="fc"><h5>Project</h5>
       <a href="https://github.com/Saidileepkumarmukkamala/argus">Source</a>
       <a href="https://github.com/Saidileepkumarmukkamala/argus/issues">Report a bug</a>

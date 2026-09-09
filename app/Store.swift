@@ -27,7 +27,9 @@ final class Store {
     var state = State()
     let url: URL
     init() {
-        let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Argus")
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? URL(fileURLWithPath: NSHomeDirectory() + "/Library/Application Support")
+        let dir = base.appendingPathComponent("Argus")
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         url = dir.appendingPathComponent("state.json")
         if let d = try? Data(contentsOf: url), let s = try? JSONDecoder().decode(State.self, from: d) { state = s }
@@ -47,6 +49,6 @@ final class Vendors {
         let parts = mac.split(separator: ":").map { String(format: "%02X", Int($0, radix: 16) ?? 0) }
         guard parts.count == 6 else { return "Unknown device" }
         if let first = Int(parts[0], radix: 16), first & 0x02 != 0 { return "Phone or laptop (private address)" }   // locally administered = randomised
-        return table[parts[0] + parts[1] + parts[2]] ?? "Unknown device"
+        return table[parts[0..<3].joined()] ?? "Unknown device"
     }
 }

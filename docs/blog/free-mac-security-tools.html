@@ -1,0 +1,78 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Free Mac security tools, and what each one actually does</title>
+<meta name="description" content="LuLu, BlockBlock, KnockKnock, OverSight, Netiquette, Pareto Security and Little Snitch compared honestly: what each covers, what macOS already does, and the gap none of them fill.">
+<link rel="canonical" href="free-mac-security-tools.html">
+<link rel="icon" href="../assets/icon.png"><link rel="stylesheet" href="../style.css">
+<meta property="og:type" content="article"><meta property="og:title" content="Free Mac security tools, and what each one actually does">
+<meta property="og:description" content="LuLu, BlockBlock, KnockKnock, OverSight, Netiquette, Pareto Security and Little Snitch compared honestly: what each covers, what macOS already does, and the gap none of them fill."><meta property="og:url" content="https://saidileepkumarmukkamala.github.io/argus/blog/free-mac-security-tools.html">
+<meta property="og:image" content="https://saidileepkumarmukkamala.github.io/argus/assets/icon.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#030407">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "BlogPosting", "headline": "Free Mac security tools, and what each one actually does", "description": "LuLu, BlockBlock, KnockKnock, OverSight, Netiquette, Pareto Security and Little Snitch compared honestly: what each covers, what macOS already does, and the gap none of them fill.", "datePublished": "2026-09-09", "dateModified": "2026-09-09", "author": {"@type": "Person", "name": "Sai Mukkamala"}, "publisher": {"@type": "Organization", "name": "Argus"}, "mainEntityOfPage": {"@type": "WebPage", "@id": "https://saidileepkumarmukkamala.github.io/argus/blog/free-mac-security-tools.html"}}</script>
+</head><body>
+<div class="mesh"><i></i><i></i></div><div class="grain"></div>
+<div class="navwrap"><nav class="nav">
+  <a class="mark" href="../">Argus<s>.</s></a>
+  <a class="lk" href="../#signals">Signals</a><a class="lk" href="">Writing</a>
+  <a class="pill" href="https://saidileepkumarmukkamala.github.io/argus/releases">Download</a>
+</nav></div>
+<article class="doc">
+<div class="kicker">Comparison</div>
+<h1>Free Mac security tools, and what each one actually does</h1>
+<p class="lede">Their names do not tell you what they do, and they overlap less than people assume.</p>
+<div class="meta">2026-09-09 · Argus</div>
+
+<p>There is a small, unusually good ecosystem of free Mac security tools. The problem is that their names do not tell you what they do, and they overlap less than people assume. Here is what each one actually covers, and where the gaps between them are.</p>
+
+<h2>The Objective-See suite</h2>
+<p>Patrick Wardle's tools are free, open source, and narrowly scoped on purpose. You are meant to run several.</p>
+<table>
+<tr><th>Tool</th><th>What it actually does</th></tr>
+<tr><td><strong>LuLu</strong></td><td>An outbound firewall. When a program tries to make a network connection, LuLu asks you whether to allow it. This is the only free tool on this list that <em>blocks</em> anything.</td></tr>
+<tr><td><strong>BlockBlock</strong></td><td>Watches the places macOS runs things from automatically, and alerts when something new installs itself there. Persistence is the step almost all malware has to take.</td></tr>
+<tr><td><strong>KnockKnock</strong></td><td>The same idea, but as a one-off scan rather than a monitor. It enumerates twenty-odd categories of persistence: launch agents, kernel extensions, browser extensions, QuickLook plugins, login hooks and more.</td></tr>
+<tr><td><strong>OverSight</strong></td><td>Tells you when your microphone or camera turns on, and which app did it.</td></tr>
+<tr><td><strong>Netiquette</strong></td><td>A network monitor. Lists every socket and connection your Mac currently has open.</td></tr>
+</table>
+
+<h2>Pareto Security</h2>
+<p><strong>Free for personal use, open source.</strong> A menu bar app that audits your settings rather than your traffic: is FileVault on, is the firewall up, is screen lock immediate, is sharing off, are updates current. Thirty-odd checks with one-click fixes for many of them. It answers "is my Mac configured sensibly", which is a genuinely different question from "is anything attacking me".</p>
+
+<h2>Little Snitch</h2>
+<p><strong>Paid, closed source.</strong> The long-standing commercial outbound firewall. More capable than LuLu, with a network monitor, rule profiles per location, and much better traffic visualisation. If you want a firewall and are willing to pay, most people end up here.</p>
+
+<h2>What macOS already does</h2>
+<p>Worth knowing before installing anything, because it is more than people expect. <strong>Gatekeeper</strong> checks apps against Apple's notarization service. <strong>XProtect</strong> is a built-in malware scanner Apple updates silently. <strong>FileVault</strong> encrypts the disk. <strong>SIP</strong> protects system files even from root. <strong>TCC</strong> gates camera, microphone, screen recording and disk access behind per-app permission.</p>
+<p>An up-to-date Mac with FileVault on, the firewall on, and Gatekeeper untouched is already in decent shape. Most of the tools above are about visibility, not additional walls.</p>
+
+<h2>The gap none of them fill</h2>
+<p>Every tool above answers a question about your machine. None of them says much about <em>the network you just walked into</em>, which for a laptop changes several times a day.</p>
+<p>Nothing in this list tells you that the café Wi-Fi you just joined is unencrypted, that your VPN silently dropped ten minutes ago, that the router's hardware identity changed while you sat still, that this network configured a proxy for you, or that the dev server you started this morning is now reachable by everyone in the room.</p>
+<p>That is the gap <a href="../">Argus</a> was built for. It is free and open source, it reads your Mac's own state and the shape of the network using public macOS tools, and it makes no network connections at all. It deliberately does not block traffic, because blocking requires an Apple entitlement that needs a paid developer account.</p>
+
+<h2>A sensible free stack</h2>
+<ol>
+<li><strong>LuLu</strong> for outbound blocking.</li>
+<li><strong>BlockBlock</strong> for persistence, monitored continuously.</li>
+<li><strong>Pareto Security</strong> or <strong>Argus</strong> for settings hygiene.</li>
+<li><strong>Argus</strong> for network changes and exposure while you move between networks.</li>
+<li><strong>OverSight</strong> if you care about camera and microphone use, though Argus now covers the on/off signal too.</li>
+</ol>
+<p>They are all lightweight and they do not conflict, because only one of them is in the traffic path.</p>
+
+<div class="cta"><div>
+<h3>Argus watches this for you</h3>
+<p>A free, open-source Mac app that tells you in plain English when your network or your Mac's exposure changes. It lives in the notch, makes no network connections, and weighs 655&nbsp;KB.</p>
+<a class="pill" href="https://github.com/Saidileepkumarmukkamala/argus/releases/latest/download/Argus.zip">Download for Mac</a>
+</div></div>
+</article>
+<footer><div class="fmark">ARGUS</div>
+<div class="fin">
+ <div class="fb"><span class="mark">Argus<s>.</s></span><p>A plain-English narrator for what changed about your network and your Mac's exposure. Free and open source.</p></div>
+ <div class="fc"><h5>Product</h5><a href="../">Overview</a><a href="../#signals">Signals</a><a href="../#limits">Limits</a><a href="../#compare">Comparison</a></div>
+ <div class="fc"><h5>Writing</h5><a href="">All posts</a><a href="free-macos-notch-apps.html">Notch apps</a><a href="public-wifi-safety-mac.html">Public Wi-Fi</a><a href="free-mac-security-tools.html">Free Mac tools</a></div>
+ <div class="fc"><h5>Project</h5><a href="https://github.com/Saidileepkumarmukkamala/argus">Source</a><a href="https://github.com/Saidileepkumarmukkamala/argus/issues">Report a bug</a><a href="https://github.com/Saidileepkumarmukkamala/argus/releases">Releases</a></div>
+</div>
+<div class="fbot"><span>© 2026 Argus. Free and open source.</span><span class="sp"><span>Not affiliated with Apple.</span></span></div></footer>
+</body></html>

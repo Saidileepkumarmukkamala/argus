@@ -43,7 +43,12 @@ enum Collect {
         n.iface = firstMatch(route, #"interface:\s*(\S+)"#) ?? ""
         guard !n.iface.isEmpty else { return n }
         n.localIP = firstMatch(sh("/sbin/ifconfig", [n.iface]), #"inet (\d+\.\d+\.\d+\.\d+)"#) ?? ""
-        if let mac = firstMatch(sh("/usr/sbin/arp", ["-n", n.gatewayIP]), #" at ([0-9a-f:]+) "#), mac != "(incomplete)" { n.gatewayMAC = normalizeMAC(mac) }
+        for attempt in 0..<2 {
+            if let mac = firstMatch(sh("/usr/sbin/arp", ["-n", n.gatewayIP]), #" at ([0-9a-f:]+) "#), mac != "(incomplete)" {
+                n.gatewayMAC = normalizeMAC(mac); break
+            }
+            if attempt == 0 { _ = portOpen(9, host: n.gatewayIP, timeoutMs: 120); usleep(180_000) }   // nudge the ARP table, then look again
+        }
         if let w = CWWiFiClient.shared().interface(withName: n.iface) {
             n.isWiFi = true
             if locationAllowed { n.ssid = w.ssid() }
@@ -97,10 +102,11 @@ enum Collect {
         for line in sh("/usr/sbin/lsof", ["-nP", "-iTCP", "-sTCP:LISTEN"]).split(separator: "\n").dropFirst() {
             var cols = line.split(separator: " ", omittingEmptySubsequences: true).map(String.init)
             if cols.last == "(LISTEN)" { cols.removeLast() }                       // lsof appends the state in parentheses
-            guard cols.count >= 9, let name = cols.last, let portStr = name.split(separator: ":").last, let port = Int(portStr) else { continue }
+            guard cols.count >= 9, let proc = cols.first, let name = cols.last,
+                  let portStr = name.split(separator: ":").last, let port = Int(portStr) else { continue }
             let host = String(name.dropLast(portStr.count + 1))
             let exposed = host == "*" || host == "0.0.0.0" || host == "[::]" || (!localIPForExposure.isEmpty && host == localIPForExposure)
-            out.append(Listener(process: cols[0], port: port, exposed: exposed))
+            out.append(Listener(process: proc, port: port, exposed: exposed))
         }
         return Array(Set(out))
     }
@@ -294,7 +300,8 @@ enum Collect {
 final class Monitor {
     var onAlert: ((Alert) -> Void)?
     var onPosture: (([Collect.PostureRow]) -> Void)?
-    var net = NetInfo(); var vpn: Bool? = nil; var dns: [String] = []; var locationAllowed = false
+    var net = NetInfo(); var vpn: Bool? = nil; var dns: [String] = []
+    var locationAllowed = false { didSet { if locationAllowed != oldValue { poke(); refreshPosture() } } }
     private var vpnCandidate: Bool? = nil; private var lastTransition = Date.distantPast
     /// The status board is expensive (~20 short shell calls). It is computed off the main thread and cached, so a
     /// click renders instantly and the fresh result swaps in when it arrives.
@@ -319,7 +326,10 @@ final class Monitor {
         guard !started else { return }; started = true
         let pm = NWPathMonitor(); pm.pathUpdateHandler = { [weak self] _ in self?.poke() }; pm.start(queue: q); pathMonitor = pm
         var ctx = SCDynamicStoreContext(version: 0, info: Unmanaged.passUnretained(self).toOpaque(), retain: nil, release: nil, copyDescription: nil)
-        if let store = SCDynamicStoreCreate(nil, "Argus" as CFString, { _, _, info in Unmanaged<Monitor>.fromOpaque(info!).takeUnretainedValue().poke() }, &ctx) {
+        if let store = SCDynamicStoreCreate(nil, "Argus" as CFString, { _, _, info in
+                guard let info else { return }
+                Unmanaged<Monitor>.fromOpaque(info).takeUnretainedValue().poke()
+            }, &ctx) {
             SCDynamicStoreSetNotificationKeys(store, nil, ["State:/Network/Global/.*", "State:/Network/Service/.*/DNS", "State:/Network/Interface/.*/Link"] as CFArray)
             if let src = SCDynamicStoreCreateRunLoopSource(nil, store, 0) { CFRunLoopAddSource(CFRunLoopGetMain(), src, .commonModes) }
             dynStore = store
@@ -358,14 +368,27 @@ final class Monitor {
     }
 
     func fastTick() {
-        let now = Collect.network(locationAllowed: locationAllowed)
+        var now = Collect.network(locationAllowed: locationAllowed)
+        // A cold or evicted ARP entry briefly hides the gateway's hardware address. Without this the network key
+        // flickers between the MAC form and the address form, the saved record stops being found, and Home appears
+        // to toggle at random. Same interface, same gateway, same local address means it is the same network.
+        if now.gatewayMAC.isEmpty, !net.gatewayMAC.isEmpty,
+           now.gatewayIP == net.gatewayIP, now.iface == net.iface, now.localIP == net.localIP {
+            now.gatewayMAC = net.gatewayMAC
+        }
         Collect.localIPForExposure = now.localIP
         let raw = Collect.vpnActive()
         // Debounce: a state has to hold for two consecutive ticks (10 s) before it counts. Wake-from-sleep flaps otherwise.
         var v = vpn ?? raw
         if raw == vpnCandidate { v = raw } else { vpnCandidate = raw }
         if now.key != net.key { lastTransition = Date(); networkChanged(from: net, to: now, vpn: v) }
-        else if now.ssid != nil && net.ssid == nil { net.ssid = now.ssid; if var r = Store.shared.state.networks[now.key] { r.name = now.displayName; Store.shared.state.networks[now.key] = r; Store.shared.save() } }
+        else if let name = now.ssid, net.ssid == nil {
+            net.ssid = name
+            if var r = Store.shared.state.networks[now.key], r.name != name {
+                r.name = name; Store.shared.state.networks[now.key] = r; Store.shared.save()
+            }
+            refreshPosture()                                    // the board and the menu both show this name
+        }
         if let old = vpn, old != v {
             lastTransition = Date()
             let untrusted = now.isWiFi && (now.securityLevel < 3 || !(Store.shared.state.networks[now.key]?.isHome ?? false))
@@ -401,13 +424,13 @@ final class Monitor {
             net = new
             return
         }
-        var rec = st.state.networks[new.key]
-        let first = rec == nil
-        if rec == nil { rec = NetworkRecord(key: new.key, name: new.displayName, security: new.securityName, firstSeen: Date(), lastSeen: Date()) }
-        rec!.lastSeen = Date(); rec!.visits += first ? 0 : 1; rec!.security = new.securityName
-        if new.ssid != nil || rec!.name.isEmpty { rec!.name = new.displayName }
-        st.state.networks[new.key] = rec!; st.save()
-        let name = rec!.name
+        let existing = st.state.networks[new.key]
+        let first = existing == nil
+        var rec = existing ?? NetworkRecord(key: new.key, name: new.displayName, security: new.securityName, firstSeen: Date(), lastSeen: Date())
+        rec.lastSeen = Date(); rec.visits += first ? 0 : 1; rec.security = new.securityName
+        if new.ssid != nil || rec.name.isEmpty { rec.name = new.displayName }
+        st.state.networks[new.key] = rec; st.save()
+        let name = rec.name
         // Evil-twin heuristic: a network we know by name, now served by a different gateway.
         // Same name, different router. Compare against the most-visited network of that name, and only bother if we
         // actually knew it well: one previous sighting is not enough to call anything an impostor.
@@ -422,7 +445,7 @@ final class Monitor {
             let open = new.isWiFi && new.securityLevel < 3
             emit(open ? .warning : .notice, "A proxy is configured here", "\(px). Your web traffic passes through it. Normal on corporate networks; on public Wi-Fi, prefer a VPN.", key: "proxy-\(new.key)", sticky: open, minGap: 600)
         }
-        if rec!.vpnSeen && !vpn {
+        if rec.vpnSeen && !vpn {
             DispatchQueue.main.asyncAfter(deadline: .now() + 60) { [weak self] in
                 guard let s = self, s.net.key == new.key, !(s.vpn ?? false) else { return }
                 s.emit(.notice, "You usually use a VPN here", "\(name) is a network where your VPN was on before. It isn't now.", key: "vpn-expected-\(new.key)", minGap: 3600)
@@ -444,8 +467,8 @@ final class Monitor {
         case 2: emit(.warning, "Weak Wi-Fi security: \(name)", "\(new.securityName). Treat it like an open network; use a VPN." + visible, key: "join-\(new.key)", sticky: true, minGap: 120)
         default:
             if first { emit(.notice, "New network: \(name)", "\(new.isWiFi ? new.securityName : "Wired"), first time here." + visible, key: "join-\(new.key)", minGap: 120) }
-            else if rec!.isHome { NSLog("home network %@", name) }
-            else { emit(.info, name, "\(new.isWiFi ? new.securityName : "Wired"), seen \(rec!.visits) times.", key: "join-\(new.key)", minGap: 120) }
+            else if rec.isHome { NSLog("home network %@", name) }
+            else { emit(.info, name, "\(new.isWiFi ? new.securityName : "Wired"), seen \(rec.visits) times.", key: "join-\(new.key)", minGap: 120) }
         }
         if old.online, let old = st.state.networks[old.key], old.vpnSeen, !vpn {
             NSLog("left a network where VPN was used")
@@ -539,9 +562,13 @@ final class Monitor {
         st.state.networks[net.key] = rec; st.save()
     }
 
+    /// Returns the state Home is actually in afterwards. It used to return false when no record existed yet, which
+    /// made the menu claim "no longer Home" for a network that had never been marked.
     func toggleHome() -> Bool {
         let st = Store.shared
-        guard var rec = st.state.networks[net.key] else { return false }
+        guard net.online else { return false }
+        var rec = st.state.networks[net.key]
+            ?? NetworkRecord(key: net.key, name: net.displayName, security: net.securityName, firstSeen: Date(), lastSeen: Date())
         rec.isHome.toggle()
         if rec.isHome { for (ip, mac) in Collect.lanDevices(net: net) where rec.devices[mac] == nil { rec.devices[mac] = DeviceRecord(mac: mac, ip: ip, vendor: Vendors.shared.lookup(mac), firstSeen: Date(), lastSeen: Date()) } }
         st.state.networks[net.key] = rec; st.save(); return rec.isHome

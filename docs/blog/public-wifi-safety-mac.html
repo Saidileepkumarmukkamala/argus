@@ -1,0 +1,89 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>How to tell if a public Wi-Fi network is watching you (on a Mac)</title>
+<meta name="description" content="Seven checks you can run with built-in macOS commands to see whether the network you just joined is encrypted, intercepting HTTPS, spoofing the router, or exposing your Mac.">
+<link rel="canonical" href="public-wifi-safety-mac.html">
+<link rel="icon" href="../assets/icon.png"><link rel="stylesheet" href="../style.css">
+<meta property="og:type" content="article"><meta property="og:title" content="How to tell if a public Wi-Fi network is watching you (on a Mac)">
+<meta property="og:description" content="Seven checks you can run with built-in macOS commands to see whether the network you just joined is encrypted, intercepting HTTPS, spoofing the router, or exposing your Mac."><meta property="og:url" content="https://saidileepkumarmukkamala.github.io/argus/blog/public-wifi-safety-mac.html">
+<meta property="og:image" content="https://saidileepkumarmukkamala.github.io/argus/assets/icon.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#030407">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "BlogPosting", "headline": "How to tell if a public Wi-Fi network is watching you", "description": "Seven checks you can run with built-in macOS commands to see whether the network you just joined is encrypted, intercepting HTTPS, spoofing the router, or exposing your Mac.", "datePublished": "2026-09-09", "dateModified": "2026-09-09", "author": {"@type": "Person", "name": "Sai Mukkamala"}, "publisher": {"@type": "Organization", "name": "Argus"}, "mainEntityOfPage": {"@type": "WebPage", "@id": "https://saidileepkumarmukkamala.github.io/argus/blog/public-wifi-safety-mac.html"}}</script>
+</head><body>
+<div class="mesh"><i></i><i></i></div><div class="grain"></div>
+<div class="navwrap"><nav class="nav">
+  <a class="mark" href="../">Argus<s>.</s></a>
+  <a class="lk" href="../#signals">Signals</a><a class="lk" href="">Writing</a>
+  <a class="pill" href="https://saidileepkumarmukkamala.github.io/argus/releases">Download</a>
+</nav></div>
+<article class="doc">
+<div class="kicker">Guide</div>
+<h1>How to tell if a public Wi-Fi network is watching you</h1>
+<p class="lede">Most advice stops at \u201cuse a VPN\u201d. Here is how to actually inspect the network you just joined, with commands already on your Mac.</p>
+<div class="meta">2026-09-09 · Argus</div>
+
+<p>Most advice about public Wi-Fi stops at "use a VPN". That is good advice and it is not the whole story, because the interesting question is not whether a network <em>could</em> be hostile. It is whether the one you are on <em>is</em> behaving strangely right now, and macOS will tell you if you ask it the right questions.</p>
+<p>Every command below is built into macOS, runs as a normal user, and needs no extra software.</p>
+
+<h2>1. Is this network encrypted at all?</h2>
+<p>An open network has no link-layer encryption, so anything not protected by HTTPS is readable by anyone in range. Most traffic is HTTPS now, which helps enormously, but not everything is, and metadata such as which sites you visit still leaks through DNS.</p>
+<p>Check what you are connected to:</p>
+<pre><code>system_profiler SPAirPortDataType | grep -A6 "Current Network"</code></pre>
+<p>Look for the security type. <strong>None</strong> means open. <strong>WEP</strong> or <strong>WPA</strong> on their own are effectively broken and should be treated like open. <strong>WPA2</strong> and <strong>WPA3</strong> are what you want.</p>
+
+<h2>2. Who is the router, and did it change?</h2>
+<p>This is the check almost nobody does, and it is the one that catches an attacker on the same network redirecting your traffic through their machine, which is called ARP spoofing.</p>
+<pre><code>route -n get default | grep gateway
+arp -n 192.168.1.1</code></pre>
+<p>The second command prints the hardware address of your router. Write it down for networks you use often. If the gateway keeps the same IP address but the hardware address changes while you are sitting still, something is answering for the router that is not the router. It can also mean the café swapped their hardware, so it is a reason to look rather than to panic, but on a network you know well it is a serious signal.</p>
+
+<h2>3. Is anything intercepting HTTPS?</h2>
+<p>If someone is reading your encrypted traffic, they have to present their own certificate. You can see whose certificate you are actually getting:</p>
+<pre><code>echo | openssl s_client -connect www.apple.com:443 -servername www.apple.com 2>/dev/null | openssl x509 -noout -issuer</code></pre>
+<p>The issuer should be Apple's own certificate authority. If it says something else, and you are not on a corporate network that told you it inspects traffic, stop using that network.</p>
+<p>A related check: has anything added a certificate authority your Mac now trusts?</p>
+<pre><code>security dump-trust-settings -d</code></pre>
+<p>On a normal machine this says no trust settings were found. Anything listed there can issue a certificate for any site and your Mac will believe it.</p>
+
+<h2>4. Where are your DNS lookups going?</h2>
+<pre><code>scutil --dns | head -20</code></pre>
+<p>Networks hand you a resolver over DHCP, which is normal. What matters is whether it changed to something you do not recognise, and whether it changed at a moment that makes no sense, such as while you were sitting still on the same network.</p>
+
+<h2>5. What is your Mac offering to the network?</h2>
+<p>This is the one that bites developers. If you started a server bound to all interfaces, everyone on the café network can reach it.</p>
+<pre><code>lsof -nP -iTCP -sTCP:LISTEN | grep -E '\*:|0\.0\.0\.0'</code></pre>
+<p>Anything listed with <code>*</code> or <code>0.0.0.0</code> is reachable from the network, not just from your machine. A development server on port 3000 or 8000 is the usual culprit. Bind to <code>127.0.0.1</code> instead and it becomes invisible to everyone else.</p>
+<p>Also check the sharing services:</p>
+<pre><code>sudo systemsetup -getremotelogin</code></pre>
+<p>or simply look in System Settings, General, Sharing. Screen Sharing and Remote Login on an untrusted network are an open invitation.</p>
+
+<h2>6. Turn on stealth mode before you travel</h2>
+<p>macOS has a firewall setting that makes your Mac ignore probes rather than answer them, which stops it appearing in a casual scan of the network.</p>
+<pre><code>/usr/libexec/ApplicationFirewall/socketfilterfw --getstealthmode</code></pre>
+<p>Turn it on in System Settings, Network, Firewall, Options. Also worth knowing: your Mac announces its name on every network it joins. Check what that name is with <code>scutil --get ComputerName</code>. If it is your full legal name, consider changing it.</p>
+
+<h2>7. Know when your VPN drops</h2>
+<p>A VPN only protects you while it is up. Several popular clients, including WireGuard and Tailscale configurations, will quietly fall back to the plain network if the tunnel dies, and nothing on screen tells you. You can see the current state with:</p>
+<pre><code>ifconfig | grep -A3 utun</code></pre>
+<p>A tunnel interface carrying a real address means you are tunnelled. If yours does not have a kill switch, this is worth checking after every sleep or network change.</p>
+
+<h2>The realistic summary</h2>
+<p>Open Wi-Fi in 2026 is not the catastrophe it was in 2012, because almost everything is HTTPS. The genuine risks that remain are: your own machine exposing services it should not, someone intercepting TLS with a certificate you never inspect, and a VPN you believe is up when it is not.</p>
+<p>All three are checkable in about a minute with the commands above. The problem is that nobody runs them at the moment they matter, which is the moment you join a new network.</p>
+
+<div class="cta"><div>
+<h3>Argus watches this for you</h3>
+<p>A free, open-source Mac app that tells you in plain English when your network or your Mac's exposure changes. It lives in the notch, makes no network connections, and weighs 655&nbsp;KB.</p>
+<a class="pill" href="https://github.com/Saidileepkumarmukkamala/argus/releases/latest/download/Argus.zip">Download for Mac</a>
+</div></div>
+</article>
+<footer><div class="fmark">ARGUS</div>
+<div class="fin">
+ <div class="fb"><span class="mark">Argus<s>.</s></span><p>A plain-English narrator for what changed about your network and your Mac's exposure. Free and open source.</p></div>
+ <div class="fc"><h5>Product</h5><a href="../">Overview</a><a href="../#signals">Signals</a><a href="../#limits">Limits</a><a href="../#compare">Comparison</a></div>
+ <div class="fc"><h5>Writing</h5><a href="">All posts</a><a href="free-macos-notch-apps.html">Notch apps</a><a href="public-wifi-safety-mac.html">Public Wi-Fi</a><a href="free-mac-security-tools.html">Free Mac tools</a></div>
+ <div class="fc"><h5>Project</h5><a href="https://github.com/Saidileepkumarmukkamala/argus">Source</a><a href="https://github.com/Saidileepkumarmukkamala/argus/issues">Report a bug</a><a href="https://github.com/Saidileepkumarmukkamala/argus/releases">Releases</a></div>
+</div>
+<div class="fbot"><span>© 2026 Argus. Free and open source.</span><span class="sp"><span>Not affiliated with Apple.</span></span></div></footer>
+</body></html>

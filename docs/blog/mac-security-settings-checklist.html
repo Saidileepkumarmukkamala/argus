@@ -1,0 +1,105 @@
+<!doctype html><html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Mac security settings that actually matter (with commands)</title>
+<meta name="description" content="A prioritised checklist of macOS security settings: FileVault, firewall and stealth mode, screen lock, exposed services, custom root certificates, configuration profiles and persistence, each with the command to check it.">
+<link rel="canonical" href="mac-security-settings-checklist.html">
+<link rel="icon" href="../assets/icon.png"><link rel="stylesheet" href="../style.css">
+<meta property="og:type" content="article"><meta property="og:title" content="The Mac security settings that actually matter (with commands)">
+<meta property="og:description" content="A prioritised checklist of macOS security settings: FileVault, firewall and stealth mode, screen lock, exposed services, custom root certificates, configuration profiles and persistence, each with the command to check it."><meta property="og:url" content="https://saidileepkumarmukkamala.github.io/argus/blog/mac-security-settings-checklist.html">
+<meta property="og:image" content="https://saidileepkumarmukkamala.github.io/argus/assets/icon.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#030407">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "BlogPosting", "headline": "The Mac security settings that actually matter", "description": "A prioritised checklist of macOS security settings: FileVault, firewall and stealth mode, screen lock, exposed services, custom root certificates, configuration profiles and persistence, each with the command to check it.", "datePublished": "2026-09-09", "dateModified": "2026-09-09", "author": {"@type": "Person", "name": "Sai Mukkamala"}, "publisher": {"@type": "Organization", "name": "Argus"}, "mainEntityOfPage": {"@type": "WebPage", "@id": "https://saidileepkumarmukkamala.github.io/argus/blog/mac-security-settings-checklist.html"}}</script>
+</head><body>
+<div class="mesh"><i></i><i></i></div><div class="grain"></div>
+<div class="navwrap"><nav class="nav">
+  <a class="mark" href="../">Argus<s>.</s></a>
+  <a class="lk" href="../#signals">Signals</a><a class="lk" href="">Writing</a>
+  <a class="pill" href="https://saidileepkumarmukkamala.github.io/argus/releases">Download</a>
+</nav></div>
+<article class="doc">
+<div class="kicker">Checklist</div>
+<h1>The Mac security settings that actually matter</h1>
+<p class="lede">Twenty-four checks, ordered by how much they matter, each with the command to run and where to fix it.</p>
+<div class="meta">2026-09-09 · Argus</div>
+
+<p>Most Mac security advice is a list of twenty settings with no sense of which ones matter. These are the checks worth actually running, each with the command to check it and where to fix it. All of them run as a normal user.</p>
+
+<h2>The five that matter most</h2>
+<h3>FileVault</h3>
+<pre><code>fdesetup status</code></pre>
+<p>Without it, anyone who takes the machine reads the disk. This is the single highest-value setting on the list. <em>System Settings, Privacy &amp; Security, FileVault.</em></p>
+
+<h3>Firewall, and stealth mode</h3>
+<pre><code>/usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate
+/usr/libexec/ApplicationFirewall/socketfilterfw --getstealthmode</code></pre>
+<p>The firewall blocks unexpected inbound connections. Stealth mode goes further and stops your Mac answering probes at all, so it does not show up in a scan of the café network. Stealth is off by default. <em>System Settings, Network, Firewall, Options.</em></p>
+
+<h3>Screen lock delay</h3>
+<pre><code>sysadminctl -screenLock status</code></pre>
+<p>A five-minute grace period means a five-minute window for anyone who walks past your open laptop. Immediate, or close to it. <em>System Settings, Lock Screen.</em></p>
+
+<h3>Apps listening on all interfaces</h3>
+<pre><code>lsof -nP -iTCP -sTCP:LISTEN | grep -E '\*:|0\.0\.0\.0'</code></pre>
+<p>Anything bound to <code>*</code> or <code>0.0.0.0</code> is reachable by every device on your current network. Development servers are the usual offenders. Bind them to <code>127.0.0.1</code>.</p>
+
+<h3>Sharing services</h3>
+<p>Screen Sharing, Remote Login and File Sharing left on from one occasion and never turned off are a standing invitation on any network you later join. <em>System Settings, General, Sharing.</em></p>
+
+<h2>The ones that are usually fine, and worth confirming</h2>
+<h3>Gatekeeper and System Integrity Protection</h3>
+<pre><code>spctl --status
+csrutil status</code></pre>
+<p>Both on by default. If either is off, something or someone turned it off deliberately, and that is worth understanding.</p>
+
+<h3>Malware definitions</h3>
+<pre><code>defaults read /Library/Apple/System/Library/CoreServices/XProtect.bundle/Contents/Info.plist CFBundleShortVersionString</code></pre>
+<p>XProtect is Apple's built-in scanner and it updates silently. What matters is the age of the file, not the number. If it has not changed in a couple of months, updates are not reaching the machine.</p>
+
+<h3>Automatic updates</h3>
+<pre><code>defaults read /Library/Preferences/com.apple.SoftwareUpdate AutomaticCheckEnabled</code></pre>
+
+<h2>The ones nobody checks, that matter more than they look</h2>
+<h3>Custom root certificates</h3>
+<pre><code>security dump-trust-settings -d</code></pre>
+<p>A certificate authority added to your Mac's trust store can issue a certificate for any website and your Mac will accept it. That is total visibility into your encrypted traffic. On a personal machine this should be empty. A corporate profile or a debugging proxy such as Charles or mitmproxy will add one, which is fine if you know about it.</p>
+
+<h3>Configuration profiles</h3>
+<pre><code>profiles list</code></pre>
+<p>Profiles can set proxies, install certificates, and change security settings. On a personal machine you should recognise everything listed.</p>
+
+<h3>What runs automatically</h3>
+<pre><code>ls ~/Library/LaunchAgents /Library/LaunchAgents /Library/LaunchDaemons
+launchctl list | grep -v com.apple</code></pre>
+<p>Establishing persistence is the step nearly all malware has to take, and it is also what every legitimate installer does. The point is not that entries exist; it is whether you recognise them.</p>
+
+<h3>AirDrop visibility</h3>
+<p>Set to Everyone, strangers can send you files in public. <em>Contacts Only</em> is the sensible default. <em>Control Centre, AirDrop.</em></p>
+
+<h3>Your Mac's name</h3>
+<pre><code>scutil --get ComputerName</code></pre>
+<p>This is broadcast on every network you join. "Sai's MacBook Pro" tells a room full of strangers your name and what hardware you carry.</p>
+
+<h3>Guest account and automatic login</h3>
+<pre><code>defaults read /Library/Preferences/com.apple.loginwindow GuestEnabled</code></pre>
+<p>Automatic login in particular defeats FileVault's protection against someone who opens the lid.</p>
+
+<h2>Doing this continuously instead of once</h2>
+<p>The problem with a checklist is that it is a snapshot. Settings drift, installers add launch agents, you turn on Screen Sharing for one call and forget, and the network changes several times a day.</p>
+<p><a href="../">Argus</a> runs these twenty-four checks continuously and shows them on one board from the notch, and tells you when any of them change. It is free, open source, and makes no network connections.</p>
+
+<div class="cta"><div>
+<h3>Argus watches this for you</h3>
+<p>A free, open-source Mac app that tells you in plain English when your network or your Mac's exposure changes. It lives in the notch, makes no network connections, and weighs 655&nbsp;KB.</p>
+<a class="pill" href="https://github.com/Saidileepkumarmukkamala/argus/releases/latest/download/Argus.zip">Download for Mac</a>
+</div></div>
+</article>
+<footer><div class="fmark">ARGUS</div>
+<div class="fin">
+ <div class="fb"><span class="mark">Argus<s>.</s></span><p>A plain-English narrator for what changed about your network and your Mac's exposure. Free and open source.</p></div>
+ <div class="fc"><h5>Product</h5><a href="../">Overview</a><a href="../#signals">Signals</a><a href="../#limits">Limits</a><a href="../#compare">Comparison</a></div>
+ <div class="fc"><h5>Writing</h5><a href="">All posts</a><a href="free-macos-notch-apps.html">Notch apps</a><a href="public-wifi-safety-mac.html">Public Wi-Fi</a><a href="free-mac-security-tools.html">Free Mac tools</a></div>
+ <div class="fc"><h5>Project</h5><a href="https://github.com/Saidileepkumarmukkamala/argus">Source</a><a href="https://github.com/Saidileepkumarmukkamala/argus/issues">Report a bug</a><a href="https://github.com/Saidileepkumarmukkamala/argus/releases">Releases</a></div>
+</div>
+<div class="fbot"><span>© 2026 Argus. Free and open source.</span><span class="sp"><span>Not affiliated with Apple.</span></span></div></footer>
+</body></html>
