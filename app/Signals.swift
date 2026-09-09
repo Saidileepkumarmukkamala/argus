@@ -137,6 +137,34 @@ enum Collect {
         if on("ProxyAutoConfigEnable") { return "auto proxy (PAC) " + (firstMatch(out, #"ProxyAutoConfigURLString\s*:\s*(\S+)"#) ?? "") }
         return nil
     }
+    /// Executable path for a pid, for processes that are not app bundles.
+    static func processPath(_ pid: Int) -> String {
+        let out = sh("/bin/ps", ["-o", "comm=", "-p", String(pid)], timeout: 4)
+        return out.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    /// Anyone signed in to this Mac from somewhere else, right now. `who` lists sessions; a session with a host in
+    /// parentheses came over the network. Screen sharing shows up as its own daemon rather than a tty.
+    struct RemoteSession { let user: String; let kind: String; let from: String }
+    static func remoteSessions() -> [RemoteSession] {
+        var out: [RemoteSession] = []
+        for line in sh("/usr/bin/who", []).split(separator: "\n") {
+            let l = String(line)
+            let cols = l.split(separator: " ", omittingEmptySubsequences: true).map(String.init)
+            guard let user = cols.first, cols.count >= 2 else { continue }
+            let tty = cols[1]
+            if tty == "console" { continue }                       // that is the person at the keyboard
+            let host = firstMatch(l, #"\(([^)]+)\)"#) ?? ""
+            if host.isEmpty { continue }                            // a local terminal window, not a remote login
+            out.append(RemoteSession(user: user, kind: "SSH", from: host))
+        }
+        // Screen Sharing runs a per-connection agent; its presence means a session is live.
+        let procs = sh("/usr/bin/pgrep", ["-l", "screensharingd|ScreensharingAgent|AppleVNCServer"], timeout: 5)
+        if !procs.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            let peer = firstMatch(sh("/usr/sbin/lsof", ["-nP", "-iTCP:5900", "-sTCP:ESTABLISHED"]), #"([0-9.]+):\d+->"#) ?? "unknown"
+            out.append(RemoteSession(user: NSUserName(), kind: "Screen Sharing", from: peer))
+        }
+        return out
+    }
     static func computerName() -> String { sh("/usr/sbin/scutil", ["--get", "ComputerName"]).trimmingCharacters(in: .whitespacesAndNewlines) }
     /// Everywhere macOS will run something for you without being asked again. Modelled on the categories
     /// KnockKnock enumerates; all of it is plain filesystem and `defaults` reading, so none of it needs a privilege.
@@ -289,6 +317,14 @@ enum Collect {
         rows.append(.init(label: "Device management", ok: true, value: m.hasPrefix("No") ? "Not enrolled" : m, hint: "An MDM can read settings and install profiles"))
         let ext = systemExtensions()
         rows.append(.init(label: "System extensions", ok: true, value: ext.isEmpty ? "None" : "\(ext.count) active", hint: "VPNs, security tools and virtual cameras install these"))
+        let sessions = remoteSessions()
+        rows.append(.init(label: "Someone connected", ok: sessions.isEmpty,
+                          value: sessions.isEmpty ? "No one" : sessions.map { "\($0.kind) from \($0.from)" }.joined(separator: ", "),
+                          hint: "People signed in to this Mac from another machine right now"))
+        let taps = Taps.keyboardTaps().filter { !$0.appleSigned }
+        rows.append(.init(label: "Keystroke access", ok: taps.isEmpty,
+                          value: taps.isEmpty ? "Apple only" : taps.map { $0.name }.joined(separator: ", "),
+                          hint: "Apps that can read every key you press, in any app"))
         let netOk = !net.isWiFi || net.securityLevel == 3 || vpn
         rows.append(.init(label: "This network", ok: netOk, value: net.isWiFi ? "\(net.displayName) · \(net.securityName)" : net.displayName, hint: vpn ? "VPN is on" : (netOk ? "Encrypted" : "Use a VPN here")))
         rows.append(.init(label: "VPN", ok: true, value: vpn ? "Connected" : "Not connected", hint: ""))
@@ -341,9 +377,11 @@ final class Monitor {
         schedule(fast ? 15 : 120) { self.mediumTick() }      // a process starting to listen has no event to hook
         schedule(fast ? 60 : 600) { self.slowTick() }        // home-network device sweep
         schedule(fast ? 30 : 1800) { self.integrityTick(first: false) }
+        schedule(fast ? 20 : 120) { self.tapsTick(first: false) }
+        schedule(fast ? 20 : 60) { self.sessionsTick(first: false) }
         let fresh = Store.shared.state.networks.isEmpty
         refreshPosture()
-        q.async { self.fastTick(); self.mediumTick(first: true); self.integrityTick(first: true)
+        q.async { self.fastTick(); self.mediumTick(first: true); self.integrityTick(first: true); self.tapsTick(first: true); self.sessionsTick(first: true)
             if fresh { self.emit(.notice, "Argus is watching", "Network changes, VPN, and what your Mac exposes. Click the notch any time for the status board.", key: "welcome", minGap: 1) } }
     }
     private func schedule(_ every: Double, _ f: @escaping () -> Void) {
@@ -534,6 +572,42 @@ final class Monitor {
         if st.state.customRoots >= 0 && roots > st.state.customRoots { emit(.warning, "New trusted root certificate", "\(roots) custom root\(roots == 1 ? "" : "s") now trusted. Its owner can inspect your encrypted traffic. Expected for a corporate profile or a debugging proxy you installed; otherwise remove it in Keychain Access.", key: "roots-\(roots)", sticky: true, minGap: 3600) }
         st.state.customRoots = roots
         st.save()
+    }
+
+    /// Someone signing in remotely is the one thing on this list that is almost never routine.
+    func sessionsTick(first: Bool) {
+        let st = Store.shared
+        let live = Collect.remoteSessions()
+        let ids = live.map { "\($0.kind)|\($0.user)|\($0.from)" }
+        if !first {
+            for (i, s) in live.enumerated() where !st.state.sessions.contains(ids[i]) {
+                emit(.warning, "Someone signed in to your Mac",
+                     "\(s.kind) session as \(s.user) from \(s.from). If that is not you, turn the service off in System Settings, General, Sharing.",
+                     key: "session-\(ids[i])", sticky: true, minGap: 300)
+            }
+        }
+        if !st.state.sessions.isEmpty && live.isEmpty {
+            emit(.notice, "Remote session ended", "No one is signed in to your Mac from elsewhere now.", key: "session-end", minGap: 300)
+        }
+        st.state.sessions = ids; st.save()
+    }
+
+    /// Something started reading your keystrokes. Text expanders and shortcut tools do this legitimately, and so does
+    /// every keylogger, so the wording names the app and lets the reader decide.
+    func tapsTick(first: Bool) {
+        let st = Store.shared
+        let taps = Taps.keyboardTaps().filter { !$0.appleSigned }
+        let ids = taps.map { $0.id }
+        if !first {
+            for t in taps where !st.state.keyTaps.contains(t.id) {
+                let who = t.signer == "unsigned" ? "It is not signed by anyone, which is unusual for a legitimate tool."
+                                                 : "Signed by \(t.signer)."
+                emit(t.signer == "unsigned" ? .warning : .notice, "\(t.name) can read your keystrokes",
+                     "It installed a keyboard event tap, so it sees every key you press in every app. \(who) Normal for text expanders, clipboard managers and shortcut tools.",
+                     key: "tap-\(t.id)", sticky: t.signer == "unsigned", minGap: 86400)
+            }
+        }
+        st.state.keyTaps = ids; st.save()
     }
 
     /// Camera or microphone went live. We deliberately do not guess which app: naming the responsible process needs

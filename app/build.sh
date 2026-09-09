@@ -2,7 +2,7 @@
 # Build Argus.app (no Xcode needed). Usage: ./build.sh [--dist] && open Argus.app
 set -e
 cd "$(dirname "$0")"
-swiftc -O -framework AppKit -framework CoreWLAN -framework CoreLocation -framework ServiceManagement -framework Network -framework SystemConfiguration -framework CoreMediaIO -framework CoreAudio -o Argus main.swift Argus.swift Signals.swift Store.swift Shell.swift Devices.swift Stats.swift
+swiftc -O -framework AppKit -framework CoreWLAN -framework CoreLocation -framework ServiceManagement -framework Network -framework SystemConfiguration -framework CoreMediaIO -framework CoreAudio -o Argus main.swift Argus.swift Signals.swift Store.swift Shell.swift Devices.swift Stats.swift Taps.swift
 APP=Argus.app/Contents
 rm -rf Argus.app; mkdir -p "$APP/MacOS" "$APP/Resources"
 cp Argus "$APP/MacOS/Argus"
@@ -17,8 +17,8 @@ cat > "$APP/Info.plist" <<PLIST
  <key>CFBundleIdentifier</key><string>app.argus.mac</string>
  <key>CFBundleExecutable</key><string>Argus</string>
  <key>CFBundlePackageType</key><string>APPL</string>
- <key>CFBundleShortVersionString</key><string>1.3.1</string>
- <key>CFBundleVersion</key><string>15</string>
+ <key>CFBundleShortVersionString</key><string>1.4.0</string>
+ <key>CFBundleVersion</key><string>16</string>
  <key>LSMinimumSystemVersion</key><string>14.0</string>
  <key>LSUIElement</key><true/>
  <key>NSHighResolutionCapable</key><true/>

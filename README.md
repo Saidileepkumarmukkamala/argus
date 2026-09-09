@@ -13,7 +13,7 @@ public macOS tools, and it makes no network connections (one optional HTTPS chec
 
 ## Verify
 ```
-shasum -a 256 ~/Downloads/Argus.zip   # 1.3.1 -> 259cc6375ebb7999efa70e7a4c9a09aa6357c2ef64013f7ea95f99c0831bc9b3
+shasum -a 256 ~/Downloads/Argus.zip   # 1.4.0 -> 27dd7bed37acb4b04ece9d0591285ae42279ab2916de0dcc3ab922d57fdfe126
 ```
 
 ## Install (from a release)
@@ -54,6 +54,8 @@ ARGUS_DEMO=1 open Argus.app     # play sample cards
 | HTTPS interception (optional) | `curl -v https://www.apple.com` issuer line |
 | Persistence | `~/Library/LaunchAgents`, `/Library/LaunchAgents`, `/Library/LaunchDaemons`, `sfltool dumpbtm` |
 | Integrity | md5 of `/etc/hosts`, `~/.ssh/authorized_keys`, shell rc files; `crontab -l`; `systemextensionsctl list`; `security dump-trust-settings` |
+| Keystroke taps | `CGGetEventTapList` — any process tapping keyDown/keyUp/flagsChanged, with its code signer |
+| Live remote sessions | `who` for network logins, plus the Screen Sharing daemon and its peer address |
 | Notarization | `spctl --assess --type execute` on app launch (NSWorkspace notification) |
 | Board | `fdesetup`, `socketfilterfw`, `spctl --status`, `csrutil`, `sysadminctl -screenLock`, `defaults` (SoftwareUpdate, loginwindow, sharingd), XProtect plist date, `profiles`, `sudo -n true`, `dscl` |
 

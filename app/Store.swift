@@ -19,6 +19,8 @@ struct State: Codable {
     var tlsCheck: Bool = false               // optional: verify HTTPS to apple.com on new networks (the only connection Argus ever makes)
     var fileHashes: [String: String] = [:]   // authorized_keys, crontab, shell rc
     var sysExtensions: [String] = []
+    var sessions: [String] = []              // remote logins already announced
+    var keyTaps: [String] = []               // processes already known to read keystrokes
     var alwaysOn: Bool = false               // keep the live stats strip under the notch
 }
 struct EventRecord: Codable { var time: Date; var title: String; var detail: String; var level: String }

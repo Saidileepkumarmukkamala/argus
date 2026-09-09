@@ -12,7 +12,7 @@
 <link rel="canonical" href="https://saidileepkumarmukkamala.github.io/argus/">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="alternate" type="application/rss+xml" title="Argus" href="https://saidileepkumarmukkamala.github.io/argus/blog/">
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "Argus", "applicationCategory": "SecurityApplication", "operatingSystem": "macOS 14.0 or later", "description": "A free, open-source macOS app that tells you in plain English when your network or your Mac's exposure changes.", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "downloadUrl": "https://github.com/Saidileepkumarmukkamala/argus/releases/latest/download/Argus.zip", "softwareVersion": "1.3.1", "license": "https://github.com/Saidileepkumarmukkamala/argus", "url": "https://saidileepkumarmukkamala.github.io/argus", "image": "https://saidileepkumarmukkamala.github.io/argus/assets/icon.png", "author": {"@type": "Person", "name": "Sai Mukkamala"}}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "Argus", "applicationCategory": "SecurityApplication", "operatingSystem": "macOS 14.0 or later", "description": "A free, open-source macOS app that tells you in plain English when your network or your Mac's exposure changes.", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "downloadUrl": "https://github.com/Saidileepkumarmukkamala/argus/releases/latest/download/Argus.zip", "softwareVersion": "1.4.0", "license": "https://github.com/Saidileepkumarmukkamala/argus", "url": "https://saidileepkumarmukkamala.github.io/argus", "image": "https://saidileepkumarmukkamala.github.io/argus/assets/icon.png", "author": {"@type": "Person", "name": "Sai Mukkamala"}}</script>
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "Is Argus free?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. Argus is free and open source. There is no account, no telemetry and no paid tier."}}, {"@type": "Question", "name": "Does Argus block network traffic?", "acceptedAnswer": {"@type": "Answer", "text": "No. Blocking requires Apple's network-extension entitlement, which needs a paid developer account. Argus tells you what changed; tools such as LuLu and Little Snitch do the blocking."}}, {"@type": "Question", "name": "Does Argus send my data anywhere?", "acceptedAnswer": {"@type": "Answer", "text": "No. Argus makes no network connections at all, apart from one optional HTTPS request to apple.com that is off by default and is used to detect HTTPS interception."}}, {"@type": "Question", "name": "Why does macOS block Argus on first launch?", "acceptedAnswer": {"@type": "Answer", "text": "Argus is not notarized, because notarizing requires a paid Apple Developer account. Run xattr -dr com.apple.quarantine /Applications/Argus.app, or open it once and use System Settings, Privacy and Security, Open Anyway."}}, {"@type": "Question", "name": "Which Macs does Argus work on?", "acceptedAnswer": {"@type": "Answer", "text": "macOS 14 or later on Apple silicon. On Macs without a notch it draws its own panel at the top of the screen."}}]}</script>
 <meta name="theme-color" content="#030407">
 <style>
@@ -240,7 +240,7 @@ footer{margin-top:150px;border-top:1px solid rgba(255,255,255,.06);position:rela
         <s><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v13m0 0l-5-5m5 5l5-5"/></svg></s></a>
       <a class="ghost" href="https://github.com/Saidileepkumarmukkamala/argus">Read the source</a>
     </div>
-    <div class="fine">676 KB · no account · no telemetry · makes no network connections</div>
+    <div class="fine">690 KB · no account · no telemetry · makes no network connections</div>
   </div>
 </div>
 
@@ -267,7 +267,7 @@ footer{margin-top:150px;border-top:1px solid rgba(255,255,255,.06);position:rela
 <div class="wrap">
   <section id="signals">
     <div class="rv"><div class="tag">What it tells you</div>
-      <h2>Fifteen things worth knowing,<br>the moment they change.</h2>
+      <h2>Seventeen things worth knowing,<br>the moment they change.</h2>
       <p class="sub">Each is detected on its own and explained in one card with what to do. Amber needs a decision. Green is information. Networks you mark as home stay quiet.</p></div>
     <div class="bento" id="sig"></div>
   </section>
@@ -275,7 +275,7 @@ footer{margin-top:150px;border-top:1px solid rgba(255,255,255,.06);position:rela
   <section id="status">
     <div class="rv"><div class="tag">One click</div>
       <h2>Your whole Mac,<br>on one board.</h2>
-      <p class="sub">Click the notch. Twenty-four checks, each green or amber, each naming the setting to change. The menu bar shield carries an amber dot while anything needs attention.</p></div>
+      <p class="sub">Click the notch. Twenty-six checks, each green or amber, each naming the setting to change. The menu bar shield carries an amber dot while anything needs attention.</p></div>
     <div class="chips rv" id="chips"></div>
   </section>
 
@@ -292,7 +292,7 @@ footer{margin-top:150px;border-top:1px solid rgba(255,255,255,.06);position:rela
       <p class="sub">Argus is built to sit next to a firewall and a settings auditor, not to replace either.</p></div>
     <div class="sh rv"><div class="co" style="padding:6px 10px"><div style="overflow-x:auto"><table>
       <tr><th></th><th>Argus</th><th>Pareto</th><th>Objective-See</th><th>Little Snitch</th></tr>
-      <tr><td>Settings checklist</td><td class="y">24 checks</td><td class="y">30+, with fixes</td><td class="n">—</td><td class="n">—</td></tr>
+      <tr><td>Settings checklist</td><td class="y">26 checks</td><td class="y">30+, with fixes</td><td class="n">—</td><td class="n">—</td></tr>
       <tr><td>Network change narration</td><td class="y">Yes</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
       <tr><td>Router impersonation, TLS interception</td><td class="y">Yes</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
       <tr><td>Exposure judged by network trust</td><td class="y">Yes</td><td class="n">—</td><td class="n">Lists sockets</td><td class="n">—</td></tr>
@@ -361,12 +361,14 @@ const SIG=[['a','Open or weak Wi-Fi','You joined a network with no encryption, o
 ['g','Sharing switched on','Remote Login, Screen Sharing or File Sharing came on, and others can now try to connect.',3],
 ['g','New device at home','Only on networks you mark as Home, named by its maker from the IEEE vendor registry.',2],
 ['g','New background item','A new login item or launch agent will run automatically from now on. The first thing malware does, and what every installer does.',2],
+['a','Something reads your keystrokes','A process installed a keyboard event tap, so it sees every key you press in any app. Text expanders and shortcut tools do this legitimately; so does every keylogger. Argus names the app and who signed it.',3],
+['a','Someone signed in remotely','An SSH or Screen Sharing session is live on your Mac right now, with the account and the address it came from. Almost never routine.',3],
 ['g','New system extension','A kernel-level extension went active. VPNs, security tools and virtual cameras install these.',2],
 ['g','Unnotarized app launched','An app opened that Apple has never checked for known malware.',2],
 ['g','SSH keys or shell startup changed','Someone can log in with a new key, or your shell will run something new every time you open a terminal.',3],
 ['g','DNS resolver changed','Your lookups moved, named when it is a known resolver: Cloudflare, Google, Quad9, the router, the VPN.',3],
 ['g','/etc/hosts changed','The file that overrides domain lookups was rewritten.',2]];
-const CHK=[['Disk encryption',1],['Firewall',1],['Stealth mode',0],['Gatekeeper',1],['System Integrity',1],['Screen lock',1],['Sharing services',1],['Apps open to network',0],['Software updates',1],['Automatic updates',1],['Malware definitions',1],['AirDrop visibility',1],['Guest account',1],['Automatic login',1],['Custom root certs',1],['Config profiles',1],['Device management',1],['System extensions',1],['Proxy',1],['Account type',1],['Analytics sharing',1],['Visible name',1],['This network',1],['VPN',1]];
+const CHK=[['Disk encryption',1],['Keystroke access',0],['Someone connected',1],['Firewall',1],['Stealth mode',0],['Gatekeeper',1],['System Integrity',1],['Screen lock',1],['Sharing services',1],['Apps open to network',0],['Software updates',1],['Automatic updates',1],['Malware definitions',1],['AirDrop visibility',1],['Guest account',1],['Automatic login',1],['Custom root certs',1],['Config profiles',1],['Device management',1],['System extensions',1],['Proxy',1],['Account type',1],['Analytics sharing',1],['Visible name',1],['This network',1],['VPN',1]];
 const CANT=[['It does not block anything','Blocking needs Apple’s network-extension entitlement, which needs a paid account. LuLu and Little Snitch do that job well; Argus tells you what they cannot.',3],
 ['It does not inspect traffic','No packet capture, no DNS filtering, no idea what your apps send. It reads your Mac’s own state and the network’s shape.',3],
 ['It is not antivirus','It sees persistence and notarization, where most Mac malware shows up first, but it never scans a file.',2],
