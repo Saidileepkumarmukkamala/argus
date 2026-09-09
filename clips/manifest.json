@@ -8,6 +8,14 @@
   "h": 156
  },
  {
+  "name": "lottie_balloons_01",
+  "bucket": "idle",
+  "frames": 240,
+  "fps": 24,
+  "w": 552,
+  "h": 156
+ },
+ {
   "name": "lottie_calavera_01",
   "bucket": "gag",
   "frames": 144,
@@ -56,6 +64,30 @@
   "h": 156
  },
  {
+  "name": "lottie_firework_01",
+  "bucket": "gag",
+  "frames": 144,
+  "fps": 24,
+  "w": 552,
+  "h": 156
+ },
+ {
+  "name": "lottie_firework_02",
+  "bucket": "gag",
+  "frames": 144,
+  "fps": 24,
+  "w": 552,
+  "h": 156
+ },
+ {
+  "name": "lottie_firework_03",
+  "bucket": "gag",
+  "frames": 192,
+  "fps": 24,
+  "w": 552,
+  "h": 156
+ },
+ {
   "name": "lottie_frog_01",
   "bucket": "idle",
   "frames": 144,
@@ -83,6 +115,14 @@
   "name": "lottie_pelican_01",
   "bucket": "gag",
   "frames": 144,
+  "fps": 24,
+  "w": 552,
+  "h": 156
+ },
+ {
+  "name": "lottie_swing_girl_01",
+  "bucket": "idle",
+  "frames": 192,
   "fps": 24,
   "w": 552,
   "h": 156
