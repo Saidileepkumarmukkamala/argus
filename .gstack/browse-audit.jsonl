@@ -31,3 +31,12 @@
 {"ts":"2026-09-09T17:51:41.644Z","cmd":"wait","args":"--load","origin":"file:///private/tmp/argussite/index.html","durationMs":0,"status":"ok","hasCookies":false,"mode":"launched"}
 {"ts":"2026-09-09T17:51:41.694Z","cmd":"js","args":"window.scrollTo(0,560);1","origin":"file:///private/tmp/argussite/index.html","durationMs":1,"status":"ok","hasCookies":false,"mode":"launched"}
 {"ts":"2026-09-09T17:51:46.067Z","cmd":"screenshot","args":"--viewport /tmp/n5.png","origin":"file:///private/tmp/argussite/index.html","durationMs":314,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-09-09T17:56:08.173Z","cmd":"goto","args":"file:///private/tmp/argussite/index.html","origin":"file:///private/tmp/argussite/index.html","durationMs":10,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-09-09T17:56:08.217Z","cmd":"wait","args":"--load","origin":"file:///private/tmp/argussite/index.html","durationMs":0,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-09-09T17:56:08.261Z","cmd":"js","args":"window.scrollTo(0,560);1","origin":"file:///private/tmp/argussite/index.html","durationMs":0,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-09-09T17:56:12.622Z","cmd":"screenshot","args":"--viewport /tmp/m1.png","origin":"file:///private/tmp/argussite/index.html","durationMs":312,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-09-09T17:56:43.392Z","cmd":"goto","args":"file:///private/tmp/argussite/index.html","origin":"file:///private/tmp/argussite/index.html","durationMs":9,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-09-09T17:56:43.442Z","cmd":"wait","args":"--load","origin":"file:///private/tmp/argussite/index.html","durationMs":0,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-09-09T17:56:43.486Z","cmd":"js","args":"window.scrollTo(0,560);1","origin":"file:///private/tmp/argussite/index.html","durationMs":1,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-09-09T17:56:47.772Z","cmd":"screenshot","args":"--viewport /tmp/m2.png","origin":"file:///private/tmp/argussite/index.html","durationMs":238,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-09-09T17:56:57.189Z","cmd":"screenshot","args":"--viewport /tmp/m3.png","origin":"file:///private/tmp/argussite/index.html","durationMs":368,"status":"ok","hasCookies":false,"mode":"launched"}

@@ -114,6 +114,20 @@ h1 em{font-style:normal;background:linear-gradient(96deg,#fff 8%,var(--cy) 52%,v
 .notch{position:absolute;top:0;left:50%;transform:translateX(-50%);z-index:6;pointer-events:none;line-height:0}
 .notch svg{display:block;filter:drop-shadow(0 10px 22px rgba(0,0,0,.7))}
 .mini{position:absolute;left:50%;transform:translateX(-50%);top:var(--mt);width:var(--mw);height:var(--mh);overflow:hidden;color:#fff}
+.mini .sc{transform-origin:top left;will-change:transform}
+/* inside the notch the card must fit the real 78pt depth, so it uses the app's own compact metrics */
+.mini .crd{padding:12px 18px;gap:12px}
+.mini .crd .ic{flex:0 0 30px;height:30px}
+.mini .crd .ic svg{width:16px;height:16px}
+.mini .crd h4{font-size:13.5px;margin:0 0 4px}
+.mini .crd p{font-size:10.5px;line-height:1.36}
+.mini .crd .mt{font-size:9px;margin-top:7px}
+.mini .brd{padding:12px 18px}
+.mini .brd .bh{font-size:8.5px;margin-bottom:9px}
+.mini .rw{font-size:9.5px;gap:7px}
+.mini .rw s{width:5px;height:5px;flex:0 0 5px}
+.mini .rw u{font-size:8.5px}
+.mini .rws{gap:2px 22px}
 
 /* ---- magnified read-out, synced ---- */
 .zoom{margin:26px auto 0;max-width:760px;padding:0 28px}
@@ -388,7 +402,8 @@ function draw(){npath.setAttribute('d',pathOf(st.w,st.d,st.ear,st.bot));
  document.getElementById('nsvg').setAttribute('height',(400*k).toFixed(1));
  mini.style.setProperty('--mt',(NH*k).toFixed(1)+'px');
  mini.style.setProperty('--mw',(st.w*k).toFixed(1)+'px');
- mini.style.setProperty('--mh',Math.max(0,st.d*k).toFixed(1)+'px')}
+ mini.style.setProperty('--mh',Math.max(0,st.d*k).toFixed(1)+'px');
+ const inner=mini.firstElementChild; if(inner) inner.style.transform='scale('+k.toFixed(4)+')'}
 addEventListener('resize',draw); draw();
 function tw(to,ms){return new Promise(r=>{const f={...st},t0=performance.now();
  (function s(t){const k=Math.min(1,(t-t0)/ms),e=1-Math.pow(1-k,3.2);
@@ -415,10 +430,12 @@ function boardHTML(){const bad=CHK.filter(c=>!c[1]).length;
  CHK.map(([t,ok],i)=>`<div class="rw" style="animation-delay:${i*13}ms"><s style="background:var(--${ok?'gr':'am'});box-shadow:0 0 8px var(--${ok?'gr':'am'})"></s><em style="font-style:normal">${t}</em><u>${ok?'ok':'check'}</u></div>`).join('')+'</div></div>'}
 async function loop(){let i=0;
  while(true){const s=SC[i%SC.length];i++;
-  const board=!!s.board,w=board?BOARDW:CARDW,d=board?250:78;
+  const board=!!s.board,w=board?BOARDW:CARDW,d=board?292:78;
   st.w=w;st.ear=EAR_O;st.bot=BOT_O;draw();
   const html=board?boardHTML():cardHTML(s);
-  mini.innerHTML='';zc.innerHTML=html;zc.style.opacity=0;
+  // the notch shows the very same card, scaled so one design pixel equals one screen point
+  mini.innerHTML=`<div class="sc" style="width:${w}px">${html}</div>`;
+  zc.innerHTML=html;zc.style.opacity=0;
   await tw({d},560);
   zc.animate([{opacity:0,transform:'translateY(8px)'},{opacity:1,transform:'none'}],{duration:420,easing:'cubic-bezier(.32,.72,0,1)',fill:'forwards'});
   zc.style.opacity=1;
@@ -426,7 +443,7 @@ async function loop(){let i=0;
   zc.animate([{opacity:1},{opacity:.0}],{duration:240,fill:'forwards'});
   await new Promise(r=>setTimeout(r,240));
   await tw({d:0},420);
-  st.w=NW;st.ear=EAR_C;st.bot=BOT_C;draw();
+  mini.innerHTML=''; st.w=NW;st.ear=EAR_C;st.bot=BOT_C;draw();
   await new Promise(r=>setTimeout(r,760))}}
 if(!matchMedia('(prefers-reduced-motion: reduce)').matches)loop();
 else{st.w=CARDW;st.ear=EAR_O;st.bot=BOT_O;st.d=78;draw();zc.innerHTML=cardHTML(SC[0])}
