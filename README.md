@@ -13,7 +13,7 @@ public macOS tools, and it makes no network connections (one optional HTTPS chec
 
 ## Verify
 ```
-shasum -a 256 ~/Downloads/Argus.zip   # 1.4.1 -> cd996341983d976199749596e4e9d8703ebc3e4fa97f4bd3800dd7b9b2c7f2b5
+shasum -a 256 ~/Downloads/Argus.zip   # 1.4.2 -> 360bcacf4aa080099c1ceecf7de1d43073cf556cf56610ef49742b54fc6d2319
 ```
 
 ## Install (from a release)

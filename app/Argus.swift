@@ -217,9 +217,19 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
     }
     func layout(size: CGSize, d: CGFloat) {
         CATransaction.begin(); CATransaction.setDisableActions(true)
-        let x1 = (size.width - bodyW) / 2, bodyRect = CGRect(x: x1, y: 0, width: bodyW, height: d)     // below the hardware notch
-        tint.frame = bodyRect; scanlines.frame = bodyRect; sweep.frame = CGRect(x: x1 - 80, y: 0, width: 80, height: d)
-        let p = CGMutablePath(); p.move(to: CGPoint(x: x1 + 26, y: d + 0.5)); p.addLine(to: CGPoint(x: x1 + bodyW - 26, y: d + 0.5)); edge.path = p   // hairline where body meets notch
+        // Anchor the body to the TOP of the view, never to y = 0. During a shrink the window is briefly taller than
+        // the shape it holds, and anchoring to the bottom drew the tint, the scan lines and the hairline at the bottom
+        // of that taller window: the whole panel appeared to drop down the screen by the height difference, which is
+        // why closing the tall status board dropped further than closing a card.
+        let x1 = (size.width - bodyW) / 2
+        let yb = size.height - notch.height - d                    // bottom edge of the body
+        let bodyRect = CGRect(x: x1, y: yb, width: bodyW, height: d)
+        tint.frame = bodyRect; scanlines.frame = bodyRect
+        sweep.frame = CGRect(x: x1 - 80, y: yb, width: 80, height: d)
+        let p = CGMutablePath()
+        p.move(to: CGPoint(x: x1 + 26, y: yb + d + 0.5))
+        p.addLine(to: CGPoint(x: x1 + bodyW - 26, y: yb + d + 0.5))
+        edge.path = p                                              // hairline where the body meets the notch
         CATransaction.commit()
     }
     func runSweep(size: CGSize) {
