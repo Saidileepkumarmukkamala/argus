@@ -1,0 +1,162 @@
+[
+ {
+  "name": "gag_cat_plant_01",
+  "bucket": "gag",
+  "frames": 84,
+  "fps": 12,
+  "w": 184,
+  "h": 52
+ },
+ {
+  "name": "gag_ghost_stuck_01",
+  "bucket": "gag",
+  "frames": 72,
+  "fps": 12,
+  "w": 184,
+  "h": 52
+ },
+ {
+  "name": "gag_kid_balloon_01",
+  "bucket": "gag",
+  "frames": 84,
+  "fps": 12,
+  "w": 184,
+  "h": 52
+ },
+ {
+  "name": "gag_knight_trip_01",
+  "bucket": "gag",
+  "frames": 84,
+  "fps": 12,
+  "w": 184,
+  "h": 52
+ },
+ {
+  "name": "gag_paper_plane_01",
+  "bucket": "gag",
+  "frames": 72,
+  "fps": 12,
+  "w": 184,
+  "h": 52
+ },
+ {
+  "name": "gag_penguin_slide_01",
+  "bucket": "gag",
+  "frames": 60,
+  "fps": 12,
+  "w": 184,
+  "h": 52
+ },
+ {
+  "name": "gag_pigeon_camera_01",
+  "bucket": "gag",
+  "frames": 54,
+  "fps": 12,
+  "w": 184,
+  "h": 52
+ },
+ {
+  "name": "gag_pigeon_camera_02",
+  "bucket": "gag",
+  "frames": 60,
+  "fps": 12,
+  "w": 184,
+  "h": 52
+ },
+ {
+  "name": "gag_pigeon_trio_01",
+  "bucket": "gag",
+  "frames": 72,
+  "fps": 12,
+  "w": 184,
+  "h": 52
+ },
+ {
+  "name": "gag_robot_vacuum_01",
+  "bucket": "gag",
+  "frames": 72,
+  "fps": 12,
+  "w": 184,
+  "h": 52
+ },
+ {
+  "name": "gag_toaster_01",
+  "bucket": "gag",
+  "frames": 84,
+  "fps": 12,
+  "w": 184,
+  "h": 52
+ },
+ {
+  "name": "gesture_balloon_breathe_01",
+  "bucket": "gesture",
+  "frames": 120,
+  "fps": 12,
+  "w": 184,
+  "h": 52
+ },
+ {
+  "name": "gesture_cat_stretch_01",
+  "bucket": "gesture",
+  "frames": 84,
+  "fps": 12,
+  "w": 184,
+  "h": 52
+ },
+ {
+  "name": "gesture_dog_leash_01",
+  "bucket": "gesture",
+  "frames": 84,
+  "fps": 12,
+  "w": 184,
+  "h": 52
+ },
+ {
+  "name": "gesture_knight_salute_01",
+  "bucket": "gesture",
+  "frames": 72,
+  "fps": 12,
+  "w": 184,
+  "h": 52
+ },
+ {
+  "name": "gesture_penguin_water_01",
+  "bucket": "gesture",
+  "frames": 96,
+  "fps": 12,
+  "w": 184,
+  "h": 52
+ },
+ {
+  "name": "gesture_snail_tea_01",
+  "bucket": "gesture",
+  "frames": 96,
+  "fps": 12,
+  "w": 184,
+  "h": 52
+ },
+ {
+  "name": "idle_bird_pass_01",
+  "bucket": "idle",
+  "frames": 48,
+  "fps": 12,
+  "w": 184,
+  "h": 52
+ },
+ {
+  "name": "idle_cat_nap_01",
+  "bucket": "idle",
+  "frames": 144,
+  "fps": 12,
+  "w": 184,
+  "h": 52
+ },
+ {
+  "name": "idle_dust_01",
+  "bucket": "idle",
+  "frames": 96,
+  "fps": 12,
+  "w": 184,
+  "h": 52
+ }
+]

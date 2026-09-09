@@ -1,0 +1,122 @@
+[
+ {
+  "name": "gag_cuckoo_01",
+  "bucket": "gag",
+  "read": "a cuckoo-clock bird pops out of a door in the notch underside; its spring overextends to the floor, it shrugs at you, and gets yanked back up",
+  "brief_file": "/Users/bittu./Documents/notch-parade/briefs/gag_cuckoo_01.md"
+ },
+ {
+  "name": "gag_egg_drop_01",
+  "bucket": "gag",
+  "read": "the notch is a birdhouse: an egg falls and hatches a chick, mum hauls it up; the second egg hatches a crocodile",
+  "brief_file": "/Users/bittu./Documents/notch-parade/briefs/gag_egg_drop_01.md"
+ },
+ {
+  "name": "gag_worm_on_string_01",
+  "bucket": "gag",
+  "read": "a hook baited with a worm lowers from the notch; a bird climbs over the ledge, grabs it, gets hoisted, escapes; the bait comes back bigger",
+  "brief_file": "/Users/bittu./Documents/notch-parade/briefs/gag_worm_on_string_01.md"
+ },
+ {
+  "name": "gag_trapdoor_01",
+  "bucket": "gag",
+  "read": "a hatch in the notch underside opens, a ladder unrolls, a small hooded creature with a lantern climbs down, sees you, flees back up; one eye peeks through the crack",
+  "brief_file": "/Users/bittu./Documents/notch-parade/briefs/gag_trapdoor_01.md"
+ },
+ {
+  "name": "gag_tether_juno_bip_01",
+  "bucket": "gag",
+  "read": "an astronaut tethers to her little rover and floats up into the notch; something tugs the rover in and she is pulled up after it",
+  "brief_file": "/Users/bittu./Documents/notch-parade/briefs/gag_tether_juno_bip_01.md"
+ },
+ {
+  "name": "gag_boot_shelter_01",
+  "bucket": "gag",
+  "read": "a boot from above nearly stomps a beetle twice; under the notch the boot cannot reach; the beetle leans on the notch, smug, and a crumb lands on its head",
+  "brief_file": "/Users/bittu./Documents/notch-parade/briefs/gag_boot_shelter_01.md"
+ },
+ {
+  "name": "gesture_giraffe_stretch_01",
+  "bucket": "gesture",
+  "read": "a giraffe whose head is up in the notch lowers it, chews, does slow neck rolls (stretch), and the head gets left behind when the body leaves",
+  "brief_file": "/Users/bittu./Documents/notch-parade/briefs/gesture_giraffe_stretch_01.md"
+ },
+ {
+  "name": "gag_newtons_roost_01",
+  "bucket": "gag",
+  "read": "five bats hang from the notch; one falls, flaps back and bumps the row; only the far bat swings like a Newton's cradle",
+  "brief_file": "/Users/bittu./Documents/notch-parade/briefs/gag_newtons_roost_01.md"
+ },
+ {
+  "name": "gag_second_summit_01",
+  "bucket": "gag",
+  "read": "a mountaineer climbs over the ledge, plants a flag, finds the notch right above, climbs its wall and plants a second flag in the ceiling upside down",
+  "brief_file": "/Users/bittu./Documents/notch-parade/briefs/gag_second_summit_01.md"
+ },
+ {
+  "name": "gag_going_up_01",
+  "bucket": "gag",
+  "read": "the notch is an elevator: commuters queue, the cabin arrives with a sleeping bear; later the bear returns wearing a commuter's hat",
+  "brief_file": "/Users/bittu./Documents/notch-parade/briefs/gag_going_up_01.md"
+ },
+ {
+  "name": "gesture_gecko_water_01",
+  "bucket": "gesture",
+  "read": "a parched gecko crawls over the ledge, a water drop from the notch revives it (drink water); it leaves the second drop for you",
+  "brief_file": "/Users/bittu./Documents/notch-parade/briefs/gesture_gecko_water_01.md"
+ },
+ {
+  "name": "gesture_bear_hibernation_01",
+  "bucket": "gesture",
+  "read": "a bear drags a blanket into the notch cave to sleep; slippers fall out and a paw fumbles for them (go to sleep)",
+  "brief_file": "/Users/bittu./Documents/notch-parade/briefs/gesture_bear_hibernation_01.md"
+ },
+ {
+  "name": "gag_black_hole_burp_01",
+  "bucket": "gag",
+  "read": "the notch swallows every object that passes under it until an anvil, then burps everything back out",
+  "brief_file": "/Users/bittu./Documents/notch-parade/briefs/gag_black_hole_burp_01.md"
+ },
+ {
+  "name": "gag_trunk_call_01",
+  "bucket": "gag",
+  "read": "an elephant trunk enters from the edge, taps the notch, sneezes, whips out; the strip shakes from footsteps of something you never see",
+  "brief_file": "/Users/bittu./Documents/notch-parade/briefs/gag_trunk_call_01.md"
+ },
+ {
+  "name": "idle_under_the_hat_01",
+  "bucket": "idle",
+  "read": "the notch is a hat brim on a giant face: only two eyes either side of the notch, tracking a fly, then a huge fingertip flicks it",
+  "brief_file": "/Users/bittu./Documents/notch-parade/briefs/idle_under_the_hat_01.md"
+ },
+ {
+  "name": "idle_iona_bo_01",
+  "bucket": "idle",
+  "read": "a tiny fish waits under the notch; a whale's giant eye slides in from one edge to greet it, and her tail enters from the opposite edge",
+  "brief_file": "/Users/bittu./Documents/notch-parade/briefs/idle_iona_bo_01.md"
+ },
+ {
+  "name": "gesture_camel_drips_01",
+  "bucket": "gesture",
+  "read": "a camel with flat humps sips drops from the notch and its humps pop back up (drink water); one last drop falls for you",
+  "brief_file": "/Users/bittu./Documents/notch-parade/briefs/gesture_camel_drips_01.md"
+ },
+ {
+  "name": "gag_threadbare_ferret_01",
+  "bucket": "gag",
+  "read": "a ferret climbs over the ledge to hunt a spider dangling from the notch; the spider hides in the notch, comes back behind it, and the startled jump hits the notch",
+  "brief_file": "/Users/bittu./Documents/notch-parade/briefs/gag_threadbare_ferret_01.md"
+ },
+ {
+  "name": "gag_fishing_from_above_01",
+  "bucket": "gag",
+  "read": "a hook with a worm dangles from the notch; a duck steals the bait; the fisher re-baits with a doughnut and the duck goes up into the notch",
+  "brief_file": "/Users/bittu./Documents/notch-parade/briefs/gag_fishing_from_above_01.md"
+ },
+ {
+  "name": "gesture_clock_clocks_out_01",
+  "bucket": "gesture",
+  "read": "an alarm clock about to ring pins its own hammer, unplugs itself, and lies down on a bell as a pillow (you did enough today)",
+  "brief_file": "/Users/bittu./Documents/notch-parade/briefs/gesture_clock_clocks_out_01.md"
+ }
+]

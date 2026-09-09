@@ -1,0 +1,130 @@
+[
+ {
+  "name": "lottie_acrobat_01",
+  "bucket": "gag",
+  "frames": 120,
+  "fps": 24,
+  "w": 552,
+  "h": 156
+ },
+ {
+  "name": "lottie_calavera_01",
+  "bucket": "gag",
+  "frames": 144,
+  "fps": 24,
+  "w": 552,
+  "h": 156
+ },
+ {
+  "name": "lottie_cockatoo_01",
+  "bucket": "gag",
+  "frames": 144,
+  "fps": 24,
+  "w": 552,
+  "h": 156
+ },
+ {
+  "name": "lottie_cyclist_01",
+  "bucket": "gag",
+  "frames": 192,
+  "fps": 24,
+  "w": 552,
+  "h": 156
+ },
+ {
+  "name": "lottie_dog_01",
+  "bucket": "idle",
+  "frames": 120,
+  "fps": 24,
+  "w": 552,
+  "h": 156
+ },
+ {
+  "name": "lottie_elephant_01",
+  "bucket": "gag",
+  "frames": 144,
+  "fps": 24,
+  "w": 552,
+  "h": 156
+ },
+ {
+  "name": "lottie_eye_01",
+  "bucket": "idle",
+  "frames": 144,
+  "fps": 24,
+  "w": 552,
+  "h": 156
+ },
+ {
+  "name": "lottie_frog_01",
+  "bucket": "idle",
+  "frames": 144,
+  "fps": 24,
+  "w": 552,
+  "h": 156
+ },
+ {
+  "name": "lottie_funky_chicken_01",
+  "bucket": "gag",
+  "frames": 120,
+  "fps": 24,
+  "w": 552,
+  "h": 156
+ },
+ {
+  "name": "lottie_girl_jump_01",
+  "bucket": "gag",
+  "frames": 120,
+  "fps": 24,
+  "w": 552,
+  "h": 156
+ },
+ {
+  "name": "lottie_pelican_01",
+  "bucket": "gag",
+  "frames": 144,
+  "fps": 24,
+  "w": 552,
+  "h": 156
+ },
+ {
+  "name": "lottie_tractor_01",
+  "bucket": "gag",
+  "frames": 192,
+  "fps": 24,
+  "w": 552,
+  "h": 156
+ },
+ {
+  "name": "lottie_walker_01",
+  "bucket": "gag",
+  "frames": 168,
+  "fps": 24,
+  "w": 552,
+  "h": 156
+ },
+ {
+  "name": "lottie_washing_01",
+  "bucket": "gag",
+  "frames": 168,
+  "fps": 24,
+  "w": 552,
+  "h": 156
+ },
+ {
+  "name": "lottie_wolf_peek_01",
+  "bucket": "gag",
+  "frames": 120,
+  "fps": 24,
+  "w": 552,
+  "h": 156
+ },
+ {
+  "name": "lottie_worm_01",
+  "bucket": "gag",
+  "frames": 192,
+  "fps": 24,
+  "w": 552,
+  "h": 156
+ }
+]

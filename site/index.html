@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notch Parade — tiny animated visitors for the MacBook notch</title>
+<meta name="description" content="A free Mac menu-bar app. Every few minutes an animated character drops by the notch. Click the notch for another. Silent, offline, 10 MB.">
+<link rel="icon" href="assets/icon.png">
+<meta property="og:title" content="Notch Parade">
+<meta property="og:description" content="Tiny animated visitors for the MacBook notch. Free.">
+<meta property="og:image" content="assets/hero_poster.jpg">
+<style>
+  :root { --bg:#0b0b0e; --panel:#141418; --line:#232329; --text:#f2f2f5; --muted:#9a9aa6; --accent:#7ad0e0; }
+  * { box-sizing:border-box }
+  html,body { margin:0; background:var(--bg); color:var(--text); font:16px/1.55 -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, system-ui, sans-serif; -webkit-font-smoothing:antialiased }
+  a { color:var(--accent); text-decoration:none } a:hover { text-decoration:underline }
+  .wrap { max-width:1040px; margin:0 auto; padding:0 24px }
+  header { padding:28px 0 8px; display:flex; align-items:center; gap:12px }
+  header img { width:34px; height:34px; border-radius:9px }
+  header .name { font-weight:600; letter-spacing:-.01em }
+  header .tag { color:var(--muted); font-size:14px; margin-left:auto }
+  .hero { padding:36px 0 12px }
+  .hero h1 { font-size:clamp(34px, 6vw, 60px); line-height:1.04; letter-spacing:-.03em; margin:0 0 16px; font-weight:700 }
+  .hero p.lead { font-size:clamp(17px, 2.2vw, 21px); color:var(--muted); max-width:640px; margin:0 0 28px }
+  .cta { display:flex; align-items:center; gap:16px; flex-wrap:wrap }
+  .btn { display:inline-flex; align-items:center; gap:10px; background:var(--text); color:#0b0b0e; padding:14px 22px; border-radius:12px; font-weight:600; font-size:17px }
+  .btn:hover { text-decoration:none; background:#fff }
+  .btn svg { width:18px; height:18px }
+  .meta { color:var(--muted); font-size:14px }
+  .screen { margin:40px 0 8px; border-radius:18px; overflow:hidden; border:1px solid var(--line); background:#1a1c28; box-shadow:0 30px 80px rgba(0,0,0,.5) }
+  .screen video, .screen img { display:block; width:100%; height:auto }
+  .caption { color:var(--muted); font-size:14px; text-align:center; margin:12px 0 0 }
+  section { padding:56px 0 8px }
+  h2 { font-size:26px; letter-spacing:-.02em; margin:0 0 10px }
+  .sub { color:var(--muted); margin:0 0 28px; max-width:620px }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:14px }
+  .clip { background:#000; border:1px solid var(--line); border-radius:14px; overflow:hidden }
+  .clip video { display:block; width:100%; height:auto }
+  .clip .l { padding:10px 14px; color:var(--muted); font-size:13px; background:var(--panel); border-top:1px solid var(--line) }
+  ol.steps { padding-left:0; list-style:none; counter-reset:s; display:grid; gap:14px; max-width:720px }
+  ol.steps li { counter-increment:s; display:flex; gap:16px; align-items:flex-start; background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px 18px }
+  ol.steps li::before { content:counter(s); flex:0 0 28px; height:28px; border-radius:50%; background:var(--text); color:#0b0b0e; font-weight:700; display:flex; align-items:center; justify-content:center; font-size:14px }
+  code { background:#1c1c22; border:1px solid var(--line); border-radius:6px; padding:1px 6px; font-size:14px; font-family:ui-monospace, SFMono-Regular, Menlo, monospace }
+  .facts { display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:14px }
+  .fact { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px }
+  .fact b { display:block; margin-bottom:6px }
+  .fact span { color:var(--muted); font-size:15px }
+  footer { padding:48px 0 40px; color:var(--muted); font-size:14px; border-top:1px solid var(--line); margin-top:56px }
+  footer p { margin:6px 0 }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="assets/icon.png" alt="">
+    <span class="name">Notch Parade</span>
+    <span class="tag">Free · macOS 14 or later · Apple silicon</span>
+  </header>
+
+  <div class="hero">
+    <h1>Tiny animated visitors<br>for the MacBook notch.</h1>
+    <p class="lead">A free menu-bar app. Every few minutes a character drops by the notch and goes about its business. Click the notch whenever you want another one. Silent, offline, and out of your way.</p>
+    <div class="cta">
+      <a class="btn" href="NotchParade.zip" download>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+        Download for Mac
+      </a>
+      <span class="meta">Version 0.1 · 10 MB zip · no account, no ads, no tracking</span>
+    </div>
+
+    <div class="screen">
+      <video src="assets/hero.mp4" poster="assets/hero_poster.jpg" autoplay muted loop playsinline></video>
+    </div>
+    <p class="caption">The black shape is the app. It sits over the hardware notch and opens only while something is happening.</p>
+  </div>
+
+  <section id="clips">
+    <h2>Who drops by</h2>
+    <p class="sub">The characters are the work of animators in the LottieFiles community, played back frame by frame in the notch. The roster grows with every release.</p>
+    <div class="grid">
+      <div class="clip"><video src="assets/lottie_frog_01.mp4" autoplay muted loop playsinline></video><div class="l">A frog on its pad</div></div>
+      <div class="clip"><video src="assets/lottie_cockatoo_01.mp4" autoplay muted loop playsinline></video><div class="l">A cockatoo flying through</div></div>
+      <div class="clip"><video src="assets/lottie_elephant_01.mp4" autoplay muted loop playsinline></video><div class="l">An elephant swinging its trunk</div></div>
+      <div class="clip"><video src="assets/lottie_wolf_peek_01.mp4" autoplay muted loop playsinline></video><div class="l">A wolf peeking</div></div>
+      <div class="clip"><video src="assets/lottie_cyclist_01.mp4" autoplay muted loop playsinline></video><div class="l">A cyclist crossing</div></div>
+      <div class="clip"><video src="assets/lottie_calavera_01.mp4" autoplay muted loop playsinline></video><div class="l">A sugar skull, dancing</div></div>
+      <div class="clip"><video src="assets/lottie_pelican_01.mp4" autoplay muted loop playsinline></video><div class="l">A pelican with a cannon</div></div>
+      <div class="clip"><video src="assets/lottie_worm_01.mp4" autoplay muted loop playsinline></video><div class="l">An inchworm, in no hurry</div></div>
+      <div class="clip"><video src="assets/lottie_funky_chicken_01.mp4" autoplay muted loop playsinline></video><div class="l">A chick with better sunglasses than you</div></div>
+      <div class="clip"><video src="assets/lottie_eye_01.mp4" autoplay muted loop playsinline></video><div class="l">Something watching back</div></div>
+      <div class="clip"><video src="assets/lottie_acrobat_01.mp4" autoplay muted loop playsinline></video><div class="l">An acrobat juggling hearts</div></div>
+      <div class="clip"><video src="assets/lottie_washing_01.mp4" autoplay muted loop playsinline></video><div class="l">Laundry day</div></div>
+    </div>
+  </section>
+
+  <section id="install">
+    <h2>Install</h2>
+    <p class="sub">Three steps. The second one is there because the app isn't notarized with Apple, which costs a developer subscription this free project doesn't have.</p>
+    <ol class="steps">
+      <li><div>Unzip the download and drag <b>Notch Parade</b> into your Applications folder.</div></li>
+      <li><div>The first time only: right-click the app, choose <b>Open</b>, then <b>Open</b> again in the dialog. macOS remembers after that.</div></li>
+      <li><div>Look up. A small <code>🐌</code> in the menu bar holds <b>Play a clip</b>, <b>Launch at Login</b> and <b>Quit</b>.</div></li>
+    </ol>
+  </section>
+
+  <section id="about">
+    <h2>What it is, and isn't</h2>
+    <div class="facts">
+      <div class="fact"><b>Offline</b><span>No network access at all. Nothing is collected, nothing is sent. There is no account.</span></div>
+      <div class="fact"><b>Light</b><span>About two hundred lines of AppKit and a folder of animation frames. It idles at zero.</span></div>
+      <div class="fact"><b>Quiet</b><span>A visitor every few minutes, never a sound. The notch is closed the rest of the time.</span></div>
+      <div class="fact"><b>Honest about the notch</b><span>On Macs without one, the app draws its own at the top of the screen.</span></div>
+    </div>
+  </section>
+
+  <footer>
+    <p>Notch Parade is free. Characters are community animations from LottieFiles, used under the Lottie Simple License, with thanks to their animators.</p>
+    <p>Not affiliated with Apple. MacBook and macOS are trademarks of Apple Inc.</p>
+  </footer>
+</div>
+</body>
+</html>

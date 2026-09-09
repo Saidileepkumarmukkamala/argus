@@ -1,0 +1,5 @@
+{"ts":"2026-09-09T15:44:38.147Z","cmd":"viewport","args":"1280x900","origin":"about:blank","durationMs":5,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-09-09T15:44:38.197Z","cmd":"goto","args":"file:///Users/bittu./Documents/notch-parade/site/index.html","origin":"file:///Users/bittu./Documents/notch-parade/site/index.html","durationMs":8,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-09-09T15:44:38.249Z","cmd":"wait","args":"--load","origin":"file:///Users/bittu./Documents/notch-parade/site/index.html","durationMs":1,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-09-09T15:44:38.422Z","cmd":"screenshot","args":"/tmp/site_full.png","origin":"file:///Users/bittu./Documents/notch-parade/site/index.html","durationMs":134,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-09-09T15:44:38.463Z","cmd":"console","args":"--errors","origin":"file:///Users/bittu./Documents/notch-parade/site/index.html","durationMs":1,"status":"ok","hasCookies":false,"mode":"launched"}

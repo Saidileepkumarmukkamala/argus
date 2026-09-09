@@ -1,0 +1,18 @@
+[
+ {
+  "name": "gag_pigeon_camera_01",
+  "bucket": "gag",
+  "frames": 54,
+  "fps": 12,
+  "w": 184,
+  "h": 31
+ },
+ {
+  "name": "gesture_snail_tea_01",
+  "bucket": "gesture",
+  "frames": 96,
+  "fps": 12,
+  "w": 184,
+  "h": 31
+ }
+]

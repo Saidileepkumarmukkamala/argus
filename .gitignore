@@ -1,0 +1,9 @@
+test/out/
+dist/
+clips_retired/
+tools3d/renders/
+app/NotchParade
+app/NotchParade.app/
+__pycache__/
+.DS_Store
+*.blend1
