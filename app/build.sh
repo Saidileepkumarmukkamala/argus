@@ -1,35 +1,35 @@
 #!/bin/sh
-# Build Ledge.app (no Xcode needed). Usage: ./build.sh [--dist] && open Ledge.app
+# Build Argus.app (no Xcode needed). Usage: ./build.sh [--dist] && open Argus.app
 set -e
 cd "$(dirname "$0")"
-swiftc -O -framework AppKit -framework CoreWLAN -framework CoreLocation -framework ServiceManagement -framework Network -framework SystemConfiguration -o Ledge main.swift Ledge.swift Signals.swift Store.swift Shell.swift
-APP=Ledge.app/Contents
-rm -rf Ledge.app; mkdir -p "$APP/MacOS" "$APP/Resources"
-cp Ledge "$APP/MacOS/Ledge"
+swiftc -O -framework AppKit -framework CoreWLAN -framework CoreLocation -framework ServiceManagement -framework Network -framework SystemConfiguration -o Argus main.swift Argus.swift Signals.swift Store.swift Shell.swift
+APP=Argus.app/Contents
+rm -rf Argus.app; mkdir -p "$APP/MacOS" "$APP/Resources"
+cp Argus "$APP/MacOS/Argus"
 cp Resources/oui.json "$APP/Resources/oui.json"
 [ -f AppIcon.icns ] && cp AppIcon.icns "$APP/Resources/AppIcon.icns"
 cat > "$APP/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
- <key>CFBundleName</key><string>Ledge</string>
- <key>CFBundleDisplayName</key><string>Ledge</string>
- <key>CFBundleIdentifier</key><string>app.ledge.mac</string>
- <key>CFBundleExecutable</key><string>Ledge</string>
+ <key>CFBundleName</key><string>Argus</string>
+ <key>CFBundleDisplayName</key><string>Argus</string>
+ <key>CFBundleIdentifier</key><string>app.argus.mac</string>
+ <key>CFBundleExecutable</key><string>Argus</string>
  <key>CFBundlePackageType</key><string>APPL</string>
- <key>CFBundleShortVersionString</key><string>1.0.1</string>
- <key>CFBundleVersion</key><string>11</string>
+ <key>CFBundleShortVersionString</key><string>1.1.0</string>
+ <key>CFBundleVersion</key><string>12</string>
  <key>LSMinimumSystemVersion</key><string>14.0</string>
  <key>LSUIElement</key><true/>
  <key>NSHighResolutionCapable</key><true/>
  <key>CFBundleIconFile</key><string>AppIcon</string>
- <key>NSLocationUsageDescription</key><string>macOS only reveals a Wi-Fi network's name to apps with Location access. Ledge uses it to label networks; it never records where you are.</string>
- <key>NSLocationWhenInUseUsageDescription</key><string>macOS only reveals a Wi-Fi network's name to apps with Location access. Ledge uses it to label networks; it never records where you are.</string>
+ <key>NSLocationUsageDescription</key><string>macOS only reveals a Wi-Fi network's name to apps with Location access. Argus uses it to label networks; it never records where you are.</string>
+ <key>NSLocationWhenInUseUsageDescription</key><string>macOS only reveals a Wi-Fi network's name to apps with Location access. Argus uses it to label networks; it never records where you are.</string>
 </dict></plist>
 PLIST
-codesign --force --deep --sign - Ledge.app >/dev/null 2>&1 || true
+codesign --force --deep --sign - Argus.app >/dev/null 2>&1 || true
 echo "built $APP"
 if [ "$1" = "--dist" ]; then
-  mkdir -p ../dist; rm -f ../dist/Ledge.zip
-  ditto -c -k --keepParent Ledge.app ../dist/Ledge.zip && ls -la ../dist/Ledge.zip
+  mkdir -p ../dist; rm -f ../dist/Argus.zip
+  ditto -c -k --keepParent Argus.app ../dist/Argus.zip && ls -la ../dist/Argus.zip
 fi

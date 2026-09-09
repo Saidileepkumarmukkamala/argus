@@ -1,4 +1,4 @@
-// Ledge — a plain-English narrator for what changed about your network and your Mac's exposure, living in the notch.
+// Argus — a plain-English narrator for what changed about your network and your Mac's exposure, living in the notch.
 // UI: a cockpit-dark body below the hardware notch, cyan scan sweep on open, glowing glyphs, countdown arc, cascading status board.
 import AppKit
 import CoreLocation
@@ -74,7 +74,7 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
     }
     static func shieldIcon(_ color: NSColor, badge: Bool = false) -> NSImage? {
         let cfg = NSImage.SymbolConfiguration(pointSize: 15, weight: .semibold)
-        guard let base = NSImage(systemSymbolName: "shield.lefthalf.filled", accessibilityDescription: "Ledge")?.withSymbolConfiguration(cfg) else { return nil }
+        guard let base = NSImage(systemSymbolName: "shield.lefthalf.filled", accessibilityDescription: "Argus")?.withSymbolConfiguration(cfg) else { return nil }
         // NSImage(size:flipped:drawingHandler:) re-draws on demand and works in every context; lockFocus is deprecated
         // and can silently yield an empty image for a status item.
         let size = NSSize(width: base.size.width + (badge ? 5 : 0), height: base.size.height)
@@ -113,6 +113,8 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
     let glyph = NSImageView(); var title = label("", size: 13.5, weight: .semibold, color: Theme.text)
     var detail = label("", size: 11.5, weight: .regular, color: Theme.dim, lines: 2); var meta = label("", size: 10, weight: .medium, color: Theme.cyan, mono: true)
     var boardViews: [NSView] = []
+    var queue: [Alert] = []            // alerts that arrived while one was on screen
+    var showing: Alert?
 
     func applicationDidFinishLaunching(_ n: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -168,7 +170,7 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
             return e
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 20) { self.refreshTint() }
-        if ProcessInfo.processInfo.environment["LEDGE_DEMO"] != nil { demo() }
+        if ProcessInfo.processInfo.environment["ARGUS_DEMO"] != nil { demo() }
     }
 
     // MARK: layers (all positioned per open size in layout())
@@ -260,7 +262,7 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
         // The shield is always the menu bar's own colour so it is never invisible; attention is an amber dot on it.
         status.button?.image = Self.shieldIcon(Self.systemIsDark() ? .white : .black, badge: bad > 0)
         status.button?.contentTintColor = nil
-        status.button?.toolTip = bad > 0 ? "Ledge — \(bad) item\(bad == 1 ? "" : "s") need attention" : "Ledge — all clear"
+        status.button?.toolTip = bad > 0 ? "Argus — \(bad) item\(bad == 1 ? "" : "s") need attention" : "Argus — all clear"
     }
 
     // MARK: alert card
@@ -286,8 +288,18 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
         let f = DateFormatter(); f.dateFormat = "HH:mm:ss"; parts.append(f.string(from: Date()))
         return parts.joined(separator: "  ·  ")
     }
+    /// Alerts arrive in bursts (join a network and three things change at once). Queue them instead of letting each
+    /// one overwrite the last unread card.
     func show(_ a: Alert) {
         if a.level == .info { return }
+        if showing != nil || !boardViews.isEmpty {
+            if !queue.contains(where: { $0.key == a.key }) && queue.count < 6 { queue.append(a) }
+            return
+        }
+        present(a)
+    }
+    func present(_ a: Alert) {
+        showing = a
         clearBoard()
         let d: CGFloat = 78, c = tone(a.level)
         setDepth(d, width: cardW)
@@ -297,7 +309,7 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
         glyph.frame = NSRect(x: x0 + 20, y: d - 52, width: 30, height: 30)
         title.stringValue = a.title; title.frame = NSRect(x: x0 + 62, y: d - 30, width: bodyW - 120, height: 18)
         detail.stringValue = a.detail; detail.frame = NSRect(x: x0 + 62, y: d - 62, width: bodyW - 120, height: 30)
-        meta.stringValue = metaLine(); meta.textColor = c.withAlphaComponent(0.85); meta.frame = NSRect(x: x0 + 62, y: 6, width: bodyW - 80, height: 13)
+        meta.stringValue = metaLine() + (queue.isEmpty ? "" : "  ·  +\(queue.count) more"); meta.textColor = c.withAlphaComponent(0.85); meta.frame = NSRect(x: x0 + 62, y: 6, width: bodyW - 80, height: 13)
         for v in [glyph, title, detail, meta] { v.isHidden = false; v.alphaValue = 0 }
         NSAnimationContext.runAnimationGroup { ctx in ctx.duration = 0.35; for v in [glyph, title, detail, meta] { v.animator().alphaValue = 1 } }
         // countdown arc + warning pulse
@@ -321,7 +333,15 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
         hideTimer = Timer.scheduledTimer(withTimeInterval: seconds, repeats: false) { [weak self] _ in self?.hide() }
     }
     func hide() {
+        showing = nil
         hideTimer?.invalidate(); ring.isHidden = true; pulse.isHidden = true
+        if let next = queue.first {                       // show the next one after the close settles
+            queue.removeFirst()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { [weak self] in
+                guard let s = self, s.showing == nil, s.boardViews.isEmpty else { return }
+                s.present(next)
+            }
+        }
         NSAnimationContext.runAnimationGroup({ ctx in ctx.duration = 0.18; for v in [glyph, title, detail, meta] { v.animator().alphaValue = 0 }; boardViews.forEach { $0.animator().alphaValue = 0 } },
             completionHandler: { for v in [self.glyph, self.title, self.detail, self.meta] { v.isHidden = true }; self.clearBoard() })
         setDepth(0)
@@ -330,6 +350,7 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
 
     // MARK: status board (click)
     func showBoard() {
+        showing = nil; queue.removeAll()               // the board supersedes pending cards
         for v in [glyph, title, detail, meta] { v.isHidden = true }
         ring.isHidden = true; pulse.isHidden = true
         // Render whatever the background scan last produced, immediately. A scan takes ~20 shell calls and must never
@@ -385,7 +406,7 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
         if !monitor.locationAllowed { m.addItem(withTitle: "Show Wi-Fi names (needs Location)…", action: #selector(menuLocation), keyEquivalent: "") }
         let paused = (Store.shared.state.pausedUntil ?? .distantPast) > Date()
         m.addItem(withTitle: paused ? "Resume alerts" : "Pause alerts for 1 hour", action: #selector(menuPause), keyEquivalent: "")
-        let tls = NSMenuItem(title: "Check for HTTPS interception on new networks", action: #selector(menuTLS(_:)), keyEquivalent: ""); tls.state = Store.shared.state.tlsCheck ? .on : .off; tls.toolTip = "The only connection Ledge makes: one HTTPS request to apple.com when you join a new or open network, to see who issued the certificate."; m.addItem(tls)
+        let tls = NSMenuItem(title: "Check for HTTPS interception on new networks", action: #selector(menuTLS(_:)), keyEquivalent: ""); tls.state = Store.shared.state.tlsCheck ? .on : .off; tls.toolTip = "The only connection Argus makes: one HTTPS request to apple.com when you join a new or open network, to see who issued the certificate."; m.addItem(tls)
         let ev = NSMenuItem(title: "Recent events", action: nil, keyEquivalent: ""); let sub = NSMenu()
         let f = DateFormatter(); f.dateFormat = "MMM d HH:mm"
         for e in Store.shared.state.events.suffix(12).reversed() { let it = NSMenuItem(title: "\(f.string(from: e.time))  \(e.title)", action: nil, keyEquivalent: ""); it.toolTip = e.detail; sub.addItem(it) }
@@ -394,7 +415,7 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
         m.addItem(withTitle: "Open data folder", action: #selector(menuData), keyEquivalent: "")
         m.addItem(.separator())
         let login = NSMenuItem(title: "Launch at Login", action: #selector(toggleLogin(_:)), keyEquivalent: ""); login.state = SMAppService.mainApp.status == .enabled ? .on : .off; m.addItem(login)
-        m.addItem(withTitle: "Quit Ledge", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        m.addItem(withTitle: "Quit Argus", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         status.menu = m
     }
     @objc func menuBoard() { showBoard() }

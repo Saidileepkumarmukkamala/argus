@@ -15,7 +15,7 @@ struct NetInfo: Equatable {
 }
 
 enum Collect {
-    /// Time-to-live cache for the few probes that are comparatively slow. Everything Ledge runs works as a normal user:
+    /// Time-to-live cache for the few probes that are comparatively slow. Everything Argus runs works as a normal user:
     /// nothing here needs root, so macOS never shows an authorisation dialog.
     private static var cache: [String: (value: Any, at: Date)] = [:]
     private static let cacheLock = NSLock()
@@ -170,7 +170,7 @@ enum Collect {
         return out.contains("does not exist") ? nil : Int(out)
     }
 
-    /// TLS interception probe: the ONLY network connection Ledge ever makes, and only when the user turned it on.
+    /// TLS interception probe: the ONLY network connection Argus ever makes, and only when the user turned it on.
     static func tlsProbe() -> (ok: Bool, issuer: String, captive: Bool) {
         let out = sh("/usr/bin/curl", ["-sv", "--max-time", "6", "-o", "/dev/null", "https://www.apple.com/"], timeout: 10)
         let issuer = firstMatch(out, #"issuer:\s*(.+)"#)?.trimmingCharacters(in: .whitespaces) ?? ""
@@ -270,7 +270,7 @@ final class Monitor {
         }
     }
     private var started = false
-    let q = DispatchQueue(label: "ledge.monitor", qos: .utility)
+    let q = DispatchQueue(label: "argus.monitor", qos: .utility)
 
     private var pathMonitor: NWPathMonitor?
     private var dynStore: SCDynamicStore?
@@ -279,17 +279,17 @@ final class Monitor {
         guard !started else { return }; started = true
         let pm = NWPathMonitor(); pm.pathUpdateHandler = { [weak self] _ in self?.poke() }; pm.start(queue: q); pathMonitor = pm
         var ctx = SCDynamicStoreContext(version: 0, info: Unmanaged.passUnretained(self).toOpaque(), retain: nil, release: nil, copyDescription: nil)
-        if let store = SCDynamicStoreCreate(nil, "Ledge" as CFString, { _, _, info in Unmanaged<Monitor>.fromOpaque(info!).takeUnretainedValue().poke() }, &ctx) {
+        if let store = SCDynamicStoreCreate(nil, "Argus" as CFString, { _, _, info in Unmanaged<Monitor>.fromOpaque(info!).takeUnretainedValue().poke() }, &ctx) {
             SCDynamicStoreSetNotificationKeys(store, nil, ["State:/Network/Global/.*", "State:/Network/Service/.*/DNS", "State:/Network/Interface/.*/Link"] as CFArray)
             if let src = SCDynamicStoreCreateRunLoopSource(nil, store, 0) { CFRunLoopAddSource(CFRunLoopGetMain(), src, .commonModes) }
             dynStore = store
         }
-        let fast = ProcessInfo.processInfo.environment["LEDGE_FAST"] != nil          // test knob: minute timers become seconds
+        let fast = ProcessInfo.processInfo.environment["ARGUS_FAST"] != nil          // test knob: minute timers become seconds
         schedule(fast ? 15 : 60) { self.fastTick() }; schedule(fast ? 15 : 60) { self.mediumTick() }; schedule(fast ? 60 : 300) { self.slowTick() }; schedule(fast ? 30 : 600) { self.integrityTick(first: false) }
         let fresh = Store.shared.state.networks.isEmpty
         refreshPosture()
         q.async { self.fastTick(); self.mediumTick(first: true); self.integrityTick(first: true)
-            if fresh { self.emit(.notice, "Ledge is watching", "Network changes, VPN, and what your Mac exposes. Click the notch any time for the status board.", key: "welcome", minGap: 1) } }
+            if fresh { self.emit(.notice, "Argus is watching", "Network changes, VPN, and what your Mac exposes. Click the notch any time for the status board.", key: "welcome", minGap: 1) } }
     }
     private func schedule(_ every: Double, _ f: @escaping () -> Void) {
         let t = DispatchSource.makeTimerSource(queue: q); t.schedule(deadline: .now() + every, repeating: every); t.setEventHandler(handler: f); t.resume(); timers.append(t)
@@ -342,6 +342,7 @@ final class Monitor {
         net = now
     }
 
+    // internal so --selftest can drive it with synthetic transitions
     func networkChanged(from old: NetInfo, to new: NetInfo, vpn: Bool) {
         guard new.online else {
             if old.online { emit(.info, "Offline", "No default route.", key: "offline", minGap: 60) }
@@ -350,21 +351,32 @@ final class Monitor {
         let st = Store.shared
         // Gateway impersonation: same router address, same interface, same local address, but the router's hardware
         // identity changed under us. Classic ARP spoofing, or a router that was swapped/rebooted with new hardware.
-        var spoofSuspect = false
-        if old.online, old.gatewayIP == new.gatewayIP, old.iface == new.iface, old.localIP == new.localIP, !old.gatewayMAC.isEmpty, !new.gatewayMAC.isEmpty, old.gatewayMAC != new.gatewayMAC {
-            spoofSuspect = true
-            emit(.warning, "Router identity changed", "The gateway at \(new.gatewayIP) is now answering from different hardware (\(Vendors.shared.lookup(new.gatewayMAC))). That's what ARP spoofing looks like; it's also what a router swap looks like. Prefer a VPN until you know which.", key: "gw-\(new.key)", sticky: true, minGap: 600)
+        if old.online, old.gatewayIP == new.gatewayIP, old.iface == new.iface, old.localIP == new.localIP,
+           !old.gatewayMAC.isEmpty, !new.gatewayMAC.isEmpty, old.gatewayMAC != new.gatewayMAC {
+            let vendor = Vendors.shared.lookup(new.gatewayMAC)
+            let who = vendor.hasPrefix("Unknown") ? "" : " (\(vendor))"
+            emit(.warning, "Router identity changed", "The gateway at \(new.gatewayIP) is now answering from different hardware\(who). That is what ARP spoofing looks like; it is also what a replaced or rebooted router looks like. Prefer a VPN until you know which.", key: "gw-\(new.key)", sticky: true, minGap: 600)
+            // Deliberately do NOT record this gateway as a known network. Persisting it would both bless the impostor
+            // and let it masquerade later as the "network you knew" in the same-name check below.
+            net = new
+            return
         }
         var rec = st.state.networks[new.key]
-        let first = rec == nil && !spoofSuspect
+        let first = rec == nil
         if rec == nil { rec = NetworkRecord(key: new.key, name: new.displayName, security: new.securityName, firstSeen: Date(), lastSeen: Date()) }
         rec!.lastSeen = Date(); rec!.visits += first ? 0 : 1; rec!.security = new.securityName
         if new.ssid != nil || rec!.name.isEmpty { rec!.name = new.displayName }
         st.state.networks[new.key] = rec!; st.save()
         let name = rec!.name
         // Evil-twin heuristic: a network we know by name, now served by a different gateway.
-        if let ssid = new.ssid, first, let twin = st.state.networks.values.first(where: { $0.name == ssid && $0.key != new.key }) {
-            emit(.warning, "Same name, different network: \(ssid)", "This \(ssid) is served by different hardware than the one you knew (\(twin.visits) visits). Could be a new router, could be an impostor. Prefer a VPN.", key: "twin-\(new.key)", sticky: true, minGap: 600)
+        // Same name, different router. Compare against the most-visited network of that name, and only bother if we
+        // actually knew it well: one previous sighting is not enough to call anything an impostor.
+        var twinFired = false
+        if let ssid = new.ssid, first,
+           let twin = st.state.networks.values.filter({ $0.name == ssid && $0.key != new.key }).max(by: { $0.visits < $1.visits }),
+           twin.visits >= 3 {
+            twinFired = true
+            emit(.warning, "Same name, different network: \(ssid)", "You have joined a \(ssid) \(twin.visits) times, but this one is served by different hardware. Could be a replaced router; could be an impostor using the name. Prefer a VPN until you are sure.", key: "twin-\(new.key)", sticky: true, minGap: 600)
         }
         if let px = Collect.proxy() {
             let open = new.isWiFi && new.securityLevel < 3
@@ -385,7 +397,8 @@ final class Monitor {
                 else if !t.ok { s.emit(.warning, "HTTPS is being intercepted", "Certificates on \(name) are issued by \u{201C}\(t.issuer)\u{201D}, not the real site. Whoever runs that can read your encrypted traffic. Expected only on a managed corporate network.", key: "tls-\(new.key)", sticky: true, minGap: 600) }
             }
         }
-        if spoofSuspect { net = new; return }
+        // The generic "new network" card would only restate, and soften, a warning we just gave.
+        if twinFired && new.securityLevel == 3 { net = new; return }
         switch (new.isWiFi ? new.securityLevel : 3) {
         case 1: emit(.warning, "Open Wi-Fi: \(name)", (first ? "No encryption. Anyone nearby can read unencrypted traffic. Use a VPN here." : "No encryption on this network. Use a VPN here.") + visible, key: "join-\(new.key)", sticky: true, minGap: 120)
         case 2: emit(.warning, "Weak Wi-Fi security: \(name)", "\(new.securityName). Treat it like an open network; use a VPN." + visible, key: "join-\(new.key)", sticky: true, minGap: 120)
@@ -457,7 +470,7 @@ final class Monitor {
 
     func appLaunched(name: String, bundleID: String, path: String) {
         let st = Store.shared
-        guard !st.state.assessedApps.contains(bundleID), !path.hasPrefix("/System/"), !path.hasPrefix("/usr/"), bundleID != "app.ledge.mac" else { return }
+        guard !st.state.assessedApps.contains(bundleID), !path.hasPrefix("/System/"), !path.hasPrefix("/usr/"), bundleID != "app.argus.mac" else { return }
         st.state.assessedApps.append(bundleID); st.save()
         if !Collect.notarized(path) {
             emit(.notice, "\(name) isn't notarized", "Apple hasn't checked this app for known malware. Fine for tools you built or trust; think twice for downloads.", key: "notary-\(bundleID)", minGap: 86400 * 30)

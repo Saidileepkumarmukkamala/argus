@@ -2,12 +2,12 @@ test/out/
 dist/
 clips_retired/
 tools3d/renders/
-app/Ledge
-app/Ledge.app/
+app/Argus
+app/Argus.app/
 app/NotchParade
 app/NotchParade.app/
 __pycache__/
 .DS_Store
 *.blend1
-docs/Ledge.zip
+docs/Argus.zip
 .gstack/

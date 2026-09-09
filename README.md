@@ -1,37 +1,42 @@
-# Ledge
+# Argus
 
 Know what changed, from the notch. A free, open-source macOS app that watches the network you're on and what your
 Mac exposes to it, and says in plain English when something changes: open Wi-Fi, VPN off, a server reachable by
 everyone on the network, a router impersonation, HTTPS interception, a new device at home, a new background item.
 It lives in the MacBook notch and is silent otherwise.
 
-Site and download: https://saidileepkumarmukkamala.github.io/ledge/
+Site and download: https://saidileepkumarmukkamala.github.io/argus/
 
 ## What it is not
 Not a firewall, not antivirus, not traffic inspection. It reads your Mac's own state and the network's shape using
 public macOS tools, and it makes no network connections (one optional HTTPS check to apple.com, off by default).
 
-## Install (from a release)
-macOS blocks apps that are not notarized by Apple. Ledge is ad-hoc signed, so after dragging it to `/Applications`:
+## Verify
 ```
-xattr -dr com.apple.quarantine /Applications/Ledge.app
+shasum -a 256 ~/Downloads/Argus.zip   # 1.1.0 -> c2b6f6cfdbf4b611eb6b99a3f0256c9949dbdf6d8bca9ccb7db748bc0b24b788
+```
+
+## Install (from a release)
+macOS blocks apps that are not notarized by Apple. Argus is ad-hoc signed, so after dragging it to `/Applications`:
+```
+xattr -dr com.apple.quarantine /Applications/Argus.app
 ```
 or double-click it once and use System Settings → Privacy & Security → **Open Anyway**. The Control-click → Open
 shortcut was removed in macOS 15 and does not work for this.
 
 ## Build
 ```
-cd app && ./build.sh            # needs Xcode command-line tools; output Ledge.app (ad-hoc signed)
-./build.sh --dist               # also zips to ../dist/Ledge.zip
-./Ledge --dump                  # print everything Ledge believes about this Mac, for auditing
-LEDGE_DEMO=1 open Ledge.app     # play sample cards
+cd app && ./build.sh            # needs Xcode command-line tools; output Argus.app (ad-hoc signed)
+./build.sh --dist               # also zips to ../dist/Argus.zip
+./Argus --dump                  # print everything Argus believes about this Mac, for auditing
+ARGUS_DEMO=1 open Argus.app     # play sample cards
 ```
 
 ## Layout
 - `app/main.swift` — entry, `--dump`
-- `app/Ledge.swift` — the notch panel, cards, status board, menu
+- `app/Argus.swift` — the notch panel, cards, status board, menu
 - `app/Signals.swift` — collectors and the alert engine (event-driven via `NWPathMonitor` + `SCDynamicStore`, minute timers for the rest)
-- `app/Store.swift` — persisted state in `~/Library/Application Support/Ledge/state.json`; IEEE OUI vendor table
+- `app/Store.swift` — persisted state in `~/Library/Application Support/Argus/state.json`; IEEE OUI vendor table
 - `app/Shell.swift` — running built-in tools, port probes, the ARP nudge
 - `docs/` — the site (GitHub Pages)
 - `archive/animations/` — the project's first life as an animated-notch toy; unused by the app
@@ -55,5 +60,5 @@ LEDGE_DEMO=1 open Ledge.app     # play sample cards
 ## False-alarm policy
 Baseline silently on first launch; announce only changes. Debounce VPN state (10 s). Suppress DNS alerts within 90 s
 of a network or VPN transition. Per-key quiet periods (10 min to 30 days). Home networks are quiet unless something
-matters. Amber only when a decision is needed; green for information. If Ledge says something that turns out to be
+matters. Amber only when a decision is needed; green for information. If Argus says something that turns out to be
 wrong, that is a bug: open an issue.

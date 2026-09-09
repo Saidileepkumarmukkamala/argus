@@ -16,7 +16,7 @@ struct State: Codable {
     var sharingSeen: [String] = []
     var assessedApps: [String] = []          // bundle ids already checked for notarization
     var events: [EventRecord] = []           // last 40 alerts shown
-    var tlsCheck: Bool = false               // optional: verify HTTPS to apple.com on new networks (the only connection Ledge ever makes)
+    var tlsCheck: Bool = false               // optional: verify HTTPS to apple.com on new networks (the only connection Argus ever makes)
     var fileHashes: [String: String] = [:]   // authorized_keys, crontab, shell rc
     var sysExtensions: [String] = []
 }
@@ -27,7 +27,7 @@ final class Store {
     var state = State()
     let url: URL
     init() {
-        let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Ledge")
+        let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Argus")
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         url = dir.appendingPathComponent("state.json")
         if let d = try? Data(contentsOf: url), let s = try? JSONDecoder().decode(State.self, from: d) { state = s }
