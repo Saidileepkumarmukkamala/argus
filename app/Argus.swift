@@ -176,6 +176,13 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
         NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
             self?.screenChanged()
         }
+        // Waking is when the world has most likely changed underneath you: a different network, a VPN that did not come
+        // back, a display that appeared. Re-read everything instead of waiting for the next timer.
+        NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
+            guard let s = self else { return }
+            s.screenChanged(); s.monitor.poke(); s.monitor.refreshPosture()
+            s.monitor.q.asyncAfter(deadline: .now() + 6) { s.monitor.mediumTick(); s.monitor.sessionsTick(first: false); s.monitor.tapsTick(first: false) }
+        }
         rebuildMenu(); status.menu?.delegate = self
         loc.delegate = self
         monitor.locationAllowed = loc.authorizationStatus == .authorizedAlways || loc.authorizationStatus == .authorized
@@ -414,8 +421,10 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
             boardViews.forEach { $0.animator().alphaValue = 0 } },
             completionHandler: { [weak self] in
                 guard let s = self else { return }
-                s.hideCardViews()
-                if s.showing == nil && s.queue.isEmpty { s.clearBoard() }
+                // Only tidy up if nothing has claimed the panel in the meantime. Doing this unconditionally hid the
+                // next card when two alerts arrived close together, which is exactly what camera and microphone do.
+                guard s.showing == nil else { return }
+                s.hideCardViews(); s.clearBoard()
             })
         if let n = next {
             queue.removeFirst()

@@ -27,17 +27,67 @@ struct EventRecord: Codable { var time: Date; var title: String; var detail: Str
 
 final class Store {
     static let shared = Store()
-    var state = State()
     let url: URL
+    /// The whole state is reachable from two threads: the monitor's background queue writes it constantly and the menu,
+    /// the board and the menu bar icon read it on the main thread. Swift arrays and dictionaries mutated concurrently
+    /// corrupt or crash, so every access goes through this lock. Reads hand back a copy, so a caller can never be
+    /// holding a half-written structure.
+    private var _state = State()
+    private let lock = NSRecursiveLock()
+    var state: State {
+        get { lock.lock(); defer { lock.unlock() }; return _state }
+        set { lock.lock(); _state = newValue; lock.unlock() }
+    }
+    /// Read-modify-write in one critical section, for the places that would otherwise lose a concurrent update.
+    func mutate(_ body: (inout State) -> Void) {
+        lock.lock(); body(&_state); lock.unlock()
+    }
+
     init() {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? URL(fileURLWithPath: NSHomeDirectory() + "/Library/Application Support")
         let dir = base.appendingPathComponent("Argus")
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         url = dir.appendingPathComponent("state.json")
-        if let d = try? Data(contentsOf: url), let s = try? JSONDecoder().decode(State.self, from: d) { state = s }
+        guard let d = try? Data(contentsOf: url) else { return }
+        if let s = try? JSONDecoder().decode(State.self, from: d) { _state = s }
+        else {
+            // Keep the damaged file rather than silently starting from nothing: losing the baseline means every known
+            // background item and listener would be announced as new.
+            let bad = url.appendingPathExtension("corrupt")
+            try? FileManager.default.removeItem(at: bad)
+            try? FileManager.default.moveItem(at: url, to: bad)
+            NSLog("Argus: state.json was unreadable, kept it as state.json.corrupt and started fresh")
+        }
     }
-    func save() { if let d = try? JSONEncoder().encode(state) { try? d.write(to: url) } }
+
+    /// Atomic, and pruned so the file cannot grow without bound over months of use.
+    func save() {
+        lock.lock()
+        prune(&_state)
+        let data = try? JSONEncoder().encode(_state)
+        lock.unlock()
+        guard let data else { return }
+        try? data.write(to: url, options: .atomic)
+    }
+
+    private func prune(_ s: inout State) {
+        let now = Date()
+        // Rate-limit stamps are only useful while their quiet period could still be running.
+        s.lastAlert = s.lastAlert.filter { now.timeIntervalSince($0.value) < 60 * 86400 }
+        // Networks you have not seen in half a year are not networks you are on.
+        if s.networks.count > 200 {
+            s.networks = Dictionary(uniqueKeysWithValues:
+                s.networks.sorted { $0.value.lastSeen > $1.value.lastSeen }.prefix(200).map { ($0.key, $0.value) })
+        }
+        for (k, var n) in s.networks where n.devices.count > 300 {
+            n.devices = Dictionary(uniqueKeysWithValues:
+                n.devices.sorted { $0.value.lastSeen > $1.value.lastSeen }.prefix(300).map { ($0.key, $0.value) })
+            s.networks[k] = n
+        }
+        if s.assessedApps.count > 500 { s.assessedApps.removeFirst(s.assessedApps.count - 500) }
+        if s.events.count > 40 { s.events.removeFirst(s.events.count - 40) }
+    }
 }
 
 /// MAC prefix -> vendor, from the bundled IEEE OUI list. Forty thousand entries are only needed the first time an

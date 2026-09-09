@@ -342,14 +342,20 @@ final class Monitor {
     /// The status board is expensive (~20 short shell calls). It is computed off the main thread and cached, so a
     /// click renders instantly and the fresh result swaps in when it arrives.
     private(set) var cachedPosture: [Collect.PostureRow] = []
+    private let busyLock = NSLock()
     private var postureBusy = false
     func refreshPosture(_ done: (([Collect.PostureRow]) -> Void)? = nil) {
-        if postureBusy { return }
-        postureBusy = true
+        busyLock.lock()
+        if postureBusy { busyLock.unlock(); return }
+        postureBusy = true; busyLock.unlock()
         q.async { [weak self] in
             guard let s = self else { return }
             let rows = Collect.posture(net: s.net, vpn: s.vpn ?? false)
-            DispatchQueue.main.async { s.cachedPosture = rows; s.postureBusy = false; s.onPosture?(rows); done?(rows) }
+            DispatchQueue.main.async {
+                s.cachedPosture = rows
+                s.busyLock.lock(); s.postureBusy = false; s.busyLock.unlock()
+                s.onPosture?(rows); done?(rows)
+            }
         }
     }
     private var started = false
@@ -614,7 +620,7 @@ final class Monitor {
     /// Apple's Endpoint Security entitlement, and a wrong name here would be worse than none.
     func deviceChanged(kind: String, name: String, on: Bool) {
         guard on else { return }
-        emit(.notice, "\(kind.capitalized) turned on", "\(name) is in use. Expected during a call or a recording; worth a look if you are not in one. Argus cannot see which app, only that it is live.", key: "dev-\(kind)", minGap: 120)
+        emit(.notice, "\(kind.capitalized) turned on", "\(name) is in use. Expected during a call or a recording; worth a look if you are not in one. Argus cannot see which app, only that it is live.", key: "dev-\(kind)", minGap: 20)
     }
 
     func appLaunched(name: String, bundleID: String, path: String) {
