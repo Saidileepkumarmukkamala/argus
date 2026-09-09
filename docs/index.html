@@ -57,16 +57,15 @@
   /* At true MacBook proportion a real sentence in here would be 6px tall and unreadable, so the
      card is drawn as the shape it is and the words are set at reading size directly beneath. */
   .ncard{display:flex;align-items:flex-start}
-  .ncard .ic{border-radius:50%;flex:none}
-  .ncard .bars{flex:1;min-width:0;display:flex;flex-direction:column}
-  .ncard .bars i{display:block;border-radius:99px;background:#e8ecf5}
-  .ncard .bars i+i{background:#6a7285}
+  .ncard .ic{border-radius:50%;flex:none;display:grid;place-items:center}
+  .ncard h4{font-weight:600;letter-spacing:-.005em;color:#fff}
+  .ncard p{color:#aab3c6;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
   .nrows{display:grid;grid-template-columns:1fr 1fr}
-  .nrow{display:flex;align-items:center}
+  .nrow{display:flex;align-items:center;color:#e2e6ef;min-width:0}
   .nrow s{border-radius:50%;flex:none;text-decoration:none}
-  .nrow i{display:block;border-radius:99px;background:#9aa3b5;flex:1}
-  .nhead{display:flex;justify-content:space-between;align-items:center}
-  .nhead i{display:block;border-radius:99px}
+  .nrow em{font-style:normal;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .nrow u{margin-left:auto;text-decoration:none;color:#7f8798;padding-left:4px}
+  .nhead{display:flex;justify-content:space-between;align-items:center;font-family:var(--mono)}
   .readout{display:flex;gap:12px;align-items:flex-start;margin:14px 0 0;min-height:52px}
   .readout .dot{flex:0 0 8px;height:8px;border-radius:50%;margin-top:6px}
   .readout b{display:block;font-size:15.5px;font-weight:600;letter-spacing:-.01em;margin-bottom:3px}
@@ -388,41 +387,52 @@ const SCENES=[
  {c:'green',i:'cam',t:'Camera turned on',d:'Something started using the camera. Argus cannot name the app, and does not pretend to.'},
  {c:'amber',i:'key',t:'An app is reading your keystrokes',d:'Command X installed a keyboard event tap. Signed by Sindre Sorhus. Normal for shortcut tools.'}];
 function px(pt){return Math.max(1,pt*SC)}
+/* Type inside the notch is sized from the app's real point sizes, with a floor so it stays
+   legible on small screens. The notch itself is never scaled up to make room for it. */
+function fs(pt,floor){return Math.max(floor,pt*SC)}
 function renderCard(s){
   const col=s.c==='amber'?'232,167,101':'122,214,164';
-  const ic=px(26), pad=px(13), gap=px(11), bar1=px(9), bar2=px(7);
-  ncontent.innerHTML='<div class="ncard" style="gap:'+gap+'px;padding:'+pad+'px '+px(16)+'px 0">'+
-    '<div class="ic" style="width:'+ic+'px;height:'+ic+'px;color:var(--'+s.c+');background:rgba('+col+',.9)"></div>'+
-    '<div class="bars" style="gap:'+px(7)+'px;padding-top:'+px(3)+'px">'+
-      '<i style="width:'+(58+((s.t.length*7)%22))+'%;height:'+bar1+'px"></i>'+
-      '<i style="width:92%;height:'+bar2+'px;opacity:.75"></i>'+
-      '<i style="width:64%;height:'+bar2+'px;opacity:.75"></i>'+
+  const ic=Math.max(11,px(26)), tSize=fs(13,7.5), bSize=fs(11,6.5);
+  const room=tSize>=8.2;                      // below this the second line stops being readable
+  ncontent.innerHTML='<div class="ncard" style="gap:'+Math.max(5,px(11))+'px;padding:'+Math.max(6,px(13))+'px '+Math.max(7,px(16))+'px 0">'+
+    '<div class="ic" style="width:'+ic+'px;height:'+ic+'px;color:var(--'+s.c+');background:rgba('+col+',.14)">'+
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:'+(ic*.6)+'px;height:'+(ic*.6)+'px">'+ICON[s.i]+'</svg></div>'+
+    '<div class="ntext" style="flex:1;min-width:0">'+
+      '<h4 style="font-size:'+tSize+'px;line-height:1.25;margin:0 0 '+px(3)+'px">'+s.t+'</h4>'+
+      (room?'<p style="font-size:'+bSize+'px;line-height:1.4;margin:0">'+s.d+'</p>':'')+
     '</div></div>';
 }
 function renderBoard(){
-  const rowH=px(9), dot=px(6), pad=px(13);
-  ncontent.innerHTML='<div style="padding:'+pad+'px '+px(16)+'px 0">'+
-    '<div class="nhead" style="margin-bottom:'+px(9)+'px">'+
-      '<i style="width:'+px(86)+'px;height:'+px(7)+'px;background:var(--accent);opacity:.85"></i>'+
-      '<i style="width:'+px(62)+'px;height:'+px(7)+'px;background:var(--amber);opacity:.85"></i></div>'+
-    '<div class="nrows" style="gap:'+px(6)+'px '+px(26)+'px">'+
-    CHECKS.slice(0,14).map(([t,ok])=>'<div class="nrow" style="gap:'+px(7)+'px">'+
+  const lSize=fs(10,6.5), dot=Math.max(2.5,px(6)), rows=lSize>=7.4?14:10;
+  ncontent.innerHTML='<div style="padding:'+Math.max(6,px(13))+'px '+Math.max(7,px(16))+'px 0">'+
+    '<div class="nhead" style="font-size:'+fs(8,5.5)+'px;letter-spacing:.1em;margin-bottom:'+px(8)+'px">'+
+      '<span style="color:var(--accent)">SYSTEM STATUS</span>'+
+      '<span style="color:var(--amber)">2 NEED ATTENTION</span></div>'+
+    '<div class="nrows" style="gap:'+px(5)+'px '+px(24)+'px;font-size:'+lSize+'px">'+
+    CHECKS.slice(0,rows).map(([t,ok])=>'<div class="nrow" style="gap:'+Math.max(3,px(7))+'px">'+
       '<s style="width:'+dot+'px;height:'+dot+'px;background:var(--'+(ok?'green':'amber')+')"></s>'+
-      '<i style="height:'+rowH*0.55+'px;max-width:'+(52+((t.length*11)%40))+'%"></i></div>').join('')+
+      '<em>'+t+'</em><u>'+(ok?'ok':'check')+'</u></div>').join('')+
     '</div></div>';
 }
 function renderReadout(s){
   readout.innerHTML='<span class="dot" style="background:var(--'+(s.board?'accent':s.c)+')"></span><div><b>'+s.t+'</b><span>'+s.d+'</span></div>';
+}
+function contentDepth(){
+  const prev=ncontent.style.height;
+  ncontent.style.height='auto';
+  const h=ncontent.firstElementChild?ncontent.firstElementChild.getBoundingClientRect().height:0;
+  ncontent.style.height=prev;
+  return Math.round(h+Math.max(6,px(13)));   // the card's bottom padding
 }
 async function loop(){
   let i=0;
   while(true){
     const s=SCENES[i%SCENES.length];i++;
     const isBoard=!!s.board;
-    st.w=(isBoard?820:560)*SC; st.ear=px(14); st.bot=px(26); draw();
+    st.w=(isBoard?820:600)*SC; st.ear=px(14); st.bot=px(26); draw();
     isBoard?renderBoard():renderCard(s);
     ncontent.style.opacity=0; renderReadout(s);
-    await tween({d:(isBoard?190:104)*SC},520);
+    await tween({d:contentDepth()},520);
     ncontent.animate([{opacity:0},{opacity:1}],{duration:260,fill:'forwards'});ncontent.style.opacity=1;
     await new Promise(r=>setTimeout(r,isBoard?4600:3800));
     ncontent.animate([{opacity:1},{opacity:0}],{duration:200,fill:'forwards'});
@@ -435,7 +445,7 @@ async function loop(){
 measure(); st.w=NW; st.ear=px(8); st.bot=px(14); draw();
 addEventListener('resize',()=>{measure();st.ear=px(8);st.bot=px(14);draw()});
 if(!matchMedia('(prefers-reduced-motion: reduce)').matches){loop()}
-else{st.w=560*SC;st.ear=px(14);st.bot=px(26);st.d=104*SC;draw();renderCard(SCENES[0]);renderReadout(SCENES[0])}
+else{st.w=600*SC;st.ear=px(14);st.bot=px(26);draw();renderCard(SCENES[0]);st.d=contentDepth();draw();renderReadout(SCENES[0])}
 </script>
 </body>
 </html>
