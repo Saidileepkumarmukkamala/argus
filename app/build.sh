@@ -2,7 +2,7 @@
 # Build Argus.app (no Xcode needed). Usage: ./build.sh [--dist] && open Argus.app
 set -e
 cd "$(dirname "$0")"
-swiftc -O -framework AppKit -framework CoreWLAN -framework CoreLocation -framework ServiceManagement -framework Network -framework SystemConfiguration -o Argus main.swift Argus.swift Signals.swift Store.swift Shell.swift
+swiftc -O -framework AppKit -framework CoreWLAN -framework CoreLocation -framework ServiceManagement -framework Network -framework SystemConfiguration -framework CoreMediaIO -framework CoreAudio -o Argus main.swift Argus.swift Signals.swift Store.swift Shell.swift Devices.swift
 APP=Argus.app/Contents
 rm -rf Argus.app; mkdir -p "$APP/MacOS" "$APP/Resources"
 cp Argus "$APP/MacOS/Argus"

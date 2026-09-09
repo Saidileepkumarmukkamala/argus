@@ -103,6 +103,7 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
     var depth: CGFloat = 0
     var status: NSStatusItem!
     let monitor = Monitor()
+    let devices = DeviceWatch()
     let loc = CLLocationManager()
     var hideTimer: Timer?
     var gen = 0
@@ -157,6 +158,8 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
         monitor.onAlert = { [weak self] a in self?.show(a) }
         monitor.onPosture = { [weak self] rows in self?.applyTint(rows) }
         monitor.start()
+        devices.onChange = { [weak self] kind, name, on in self?.monitor.deviceChanged(kind: kind, name: name, on: on) }
+        devices.start()
         NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didLaunchApplicationNotification, object: nil, queue: .main) { [weak self] n in
             guard let app = n.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication, let url = app.bundleURL, let bid = app.bundleIdentifier else { return }
             let name = app.localizedName ?? bid

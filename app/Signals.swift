@@ -132,12 +132,52 @@ enum Collect {
         return nil
     }
     static func computerName() -> String { sh("/usr/sbin/scutil", ["--get", "ComputerName"]).trimmingCharacters(in: .whitespacesAndNewlines) }
+    /// Everywhere macOS will run something for you without being asked again. Modelled on the categories
+    /// KnockKnock enumerates; all of it is plain filesystem and `defaults` reading, so none of it needs a privilege.
+    static let persistenceDirs: [(String, String)] = [
+        ("~/Library/LaunchAgents", "login agent"), ("/Library/LaunchAgents", "login agent"), ("/Library/LaunchDaemons", "system daemon"),
+        ("/System/Library/LaunchAgents", "system agent"), ("/System/Library/LaunchDaemons", "system daemon"),
+        ("/Library/StartupItems", "startup item"), ("/Library/Extensions", "kernel extension"),
+        ("/Library/Security/SecurityAgentPlugins", "authorisation plugin"),
+        ("/Library/QuickLook", "QuickLook plugin"), ("~/Library/QuickLook", "QuickLook plugin"),
+        ("/Library/Spotlight", "Spotlight importer"), ("~/Library/Spotlight", "Spotlight importer"),
+        ("/Library/Audio/Plug-Ins/HAL", "audio plugin"), ("/Library/DirectoryServices/PlugIns", "directory plugin"),
+        ("/Library/Widgets", "widget"), ("~/Library/Services", "service"),
+        ("/Library/ColorPickers", "colour picker"), ("~/Library/ColorPickers", "colour picker"),
+        ("/Library/Internet Plug-Ins", "internet plugin"), ("~/Library/Internet Plug-Ins", "internet plugin"),
+        ("/etc/periodic/daily", "periodic script"), ("/etc/periodic/weekly", "periodic script"), ("/etc/periodic/monthly", "periodic script"),
+        ("/etc/emond.d/rules", "event rule"),
+        ("~/Library/Application Support/Google/Chrome/Default/Extensions", "Chrome extension"),
+        ("~/Library/Safari/Extensions", "Safari extension"),
+    ]
     static func persistenceItems() -> [String] {
         var items: [String] = []
-        let home = NSHomeDirectory()
-        for dir in ["\(home)/Library/LaunchAgents", "/Library/LaunchAgents", "/Library/LaunchDaemons"] {
-            for f in (try? FileManager.default.contentsOfDirectory(atPath: dir)) ?? [] where f.hasSuffix(".plist") { items.append((dir.hasPrefix(home) ? "~" : "") + dir.split(separator: "/").last! + "/" + f) }
+        let home = NSHomeDirectory(), fm = FileManager.default
+        for (raw, label) in persistenceDirs {
+            let dir = raw.hasPrefix("~") ? home + raw.dropFirst() : raw
+            guard let entries = try? fm.contentsOfDirectory(atPath: dir) else { continue }
+            for f in entries where !f.hasPrefix(".") {
+                if raw.hasPrefix("/System/") && !f.contains("thirdparty") { continue }        // Apple's own, far too noisy
+                let low = f.lowercased()
+                if low.hasSuffix(".db") || low.hasSuffix(".db-wal") || low.hasSuffix(".db-shm")
+                    || low.contains("cache") || low.hasSuffix(".plist.lockfile") { continue }  // data, not something that runs
+                items.append("\(label) · \(f)")
+            }
         }
+        // Login and logout hooks: one line in a plist, still honoured, and a classic hiding place.
+        for (dom, key) in [("/var/root/Library/Preferences/com.apple.loginwindow", "LoginHook"),
+                           ("/var/root/Library/Preferences/com.apple.loginwindow", "LogoutHook"),
+                           ("com.apple.loginwindow", "LoginHook"), ("com.apple.loginwindow", "LogoutHook")] {
+            let v = sh("/usr/bin/defaults", ["read", dom, key]).trimmingCharacters(in: .whitespacesAndNewlines)
+            if !v.isEmpty && !v.contains("does not exist") { items.append("\(key.lowercased()) hook · \(v)") }
+        }
+        // Anything asking the dynamic linker to inject a library into other processes.
+        for f in ["/etc/launchd.conf", "/etc/zshenv", "/etc/profile", "/etc/bashrc"] where fm.fileExists(atPath: f) {
+            if let t = try? String(contentsOfFile: f, encoding: .utf8), t.contains("DYLD_INSERT_LIBRARIES") {
+                items.append("library insert · \(f)")
+            }
+        }
+        for f in ["/etc/crontab"] where fm.fileExists(atPath: f) { items.append("system cron · \(f)") }
         // Deliberately NOT sfltool dumpbtm: it requires root and pops an authorisation dialog. launchctl lists what is
         // actually loaded in this user's session and needs no privileges at all.
         for line in sh("/bin/launchctl", ["list"], timeout: 8).split(separator: "\n").dropFirst() {
@@ -145,7 +185,7 @@ enum Collect {
             guard cols.count >= 3 else { continue }
             let label = cols[2].trimmingCharacters(in: .whitespaces)
             guard !label.isEmpty, !label.hasPrefix("com.apple."), !label.hasPrefix("application.") else { continue }
-            items.append("job " + label)
+            items.append("job · " + label)
         }
         return Array(Set(items)).sorted()
     }
@@ -466,6 +506,13 @@ final class Monitor {
         if st.state.customRoots >= 0 && roots > st.state.customRoots { emit(.warning, "New trusted root certificate", "\(roots) custom root\(roots == 1 ? "" : "s") now trusted. Its owner can inspect your encrypted traffic. Expected for a corporate profile or a debugging proxy you installed; otherwise remove it in Keychain Access.", key: "roots-\(roots)", sticky: true, minGap: 3600) }
         st.state.customRoots = roots
         st.save()
+    }
+
+    /// Camera or microphone went live. We deliberately do not guess which app: naming the responsible process needs
+    /// Apple's Endpoint Security entitlement, and a wrong name here would be worse than none.
+    func deviceChanged(kind: String, name: String, on: Bool) {
+        guard on else { return }
+        emit(.notice, "\(kind.capitalized) turned on", "\(name) is in use. Expected during a call or a recording; worth a look if you are not in one. Argus cannot see which app, only that it is live.", key: "dev-\(kind)", minGap: 120)
     }
 
     func appLaunched(name: String, bundleID: String, path: String) {
