@@ -55,18 +55,29 @@
   .notch{position:absolute;top:0;left:50%;transform:translateX(-50%);pointer-events:none}
   .notch svg{display:block}
   .ncontent{position:absolute;left:50%;transform:translateX(-50%);top:22px;overflow:hidden;color:#fff}
-  /* At true MacBook proportion a real sentence in here would be 6px tall and unreadable, so the
-     card is drawn as the shape it is and the words are set at reading size directly beneath. */
+  /* At true MacBook proportion the card's own text is small, so the sentence is repeated at reading
+     size below the panel. Everything else here mirrors the real card: cyan hairline, ring icon,
+     monospace footer, countdown ring. */
+  .ncontent{background:repeating-linear-gradient(180deg,rgba(255,255,255,.022) 0 1px,transparent 1px 3px)}
+  .nhair{position:absolute;top:0;height:1px;background:linear-gradient(90deg,transparent,var(--nhc,#5cdbff),transparent);opacity:.85}
   .ncard{display:flex;align-items:flex-start}
-  .ncard .ic{border-radius:50%;flex:none;display:grid;place-items:center}
-  .ncard h4{font-weight:600;letter-spacing:-.005em;color:#fff}
-  .ncard p{color:#aab3c6;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .ncard .ic{border-radius:50%;flex:none;position:relative;display:grid;place-items:center}
+  .ncard .ic b{position:absolute;border-radius:50%;border:1px solid currentColor;opacity:.45}
+  .ncard .ic u{border-radius:50%;background:currentColor;text-decoration:none;display:block}
+  .ncard h4{font-weight:500;letter-spacing:-.005em;color:#f5f5f5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ncard p{color:#98a1b4;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .nmeta{font-family:var(--mono);letter-spacing:.06em;opacity:.95}
+  .nring{flex:none;transform:rotate(-90deg)}
   .nrows{display:grid;grid-template-columns:1fr 1fr}
-  .nrow{display:flex;align-items:center;color:#e2e6ef;min-width:0}
+  .nrow{display:flex;align-items:center;color:#eceff5;min-width:0}
   .nrow s{border-radius:50%;flex:none;text-decoration:none}
   .nrow em{font-style:normal;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .nrow u{margin-left:auto;text-decoration:none;color:#7f8798;padding-left:4px}
-  .nhead{display:flex;justify-content:space-between;align-items:center;font-family:var(--mono)}
+  .nrow u{margin-left:auto;text-decoration:none;color:#8891a3;font-family:var(--mono);padding-left:6px;white-space:nowrap}
+  .nhead{display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);letter-spacing:.12em}
+  .nstats{display:flex;align-items:center;justify-content:center;font-family:var(--mono);white-space:nowrap;height:100%}
+  .nstats i{font-style:normal;color:rgba(255,255,255,.4);font-weight:600}
+  .nstats b{font-weight:500}
+  .nstats s{text-decoration:none;color:rgba(255,255,255,.22)}
   .readout{display:flex;gap:12px;align-items:flex-start;margin:14px 0 0;min-height:52px}
   .readout .dot{flex:0 0 8px;height:8px;border-radius:50%;margin-top:6px}
   .readout b{display:block;font-size:15.5px;font-weight:600;letter-spacing:-.01em;margin-bottom:3px}
@@ -81,9 +92,12 @@
   .c .t{display:flex;align-items:center;gap:9px;font-weight:600;font-size:15.5px;margin-bottom:7px}
   .c .t s{width:7px;height:7px;border-radius:50%;text-decoration:none;flex:0 0 7px}
   .c p{margin:0;color:var(--muted);font-size:14.5px;line-height:1.5}
-  .checks{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:8px}
+  .checks{display:grid;grid-template-columns:repeat(auto-fill,minmax(295px,1fr));gap:8px}
   .chk{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 13px;display:flex;align-items:center;gap:9px;font-size:13.5px}
   .chk s{width:6px;height:6px;border-radius:50%;flex:0 0 6px;text-decoration:none}
+  .chk em{font-style:normal;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chk u{margin-left:auto;text-decoration:none;font-family:var(--mono);font-size:12px;color:var(--dim);
+    white-space:nowrap;padding-left:8px;overflow:hidden;text-overflow:ellipsis;max-width:52%}
 
   .tw{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
   table{width:100%;border-collapse:collapse;font-size:14.5px}
@@ -181,7 +195,7 @@
     </div>
   </div>
   <div class="readout" id="readout"></div>
-  <p class="caption">The black shape is the app, drawn at the size it really is on a 14-inch MacBook. It cycles through alerts Argus actually sends. The text beneath is the same card, set at reading size.</p>
+  <p class="caption">The black shape is the app, drawn at the size it really is on a 14-inch MacBook. It cycles through real alerts, the status board, and the optional always-on stats strip. The text beneath is the same card, set at reading size.</p>
 
   <section id="signals">
     <h2>What it tells you</h2>
@@ -336,7 +350,13 @@ const SIGNALS=[
  ['g','Scheduled jobs changed','A cron entry appeared or changed, so something new runs on a timer.'],
  ['g','/etc/hosts changed','The file that overrides domain lookups was rewritten.']];
 
-const CHECKS=[['Disk encryption',1],['Firewall',1],['Gatekeeper',1],['System integrity',1],['Screen lock',1],['Sharing services',1],['Apps open to the network',0],['Software updates',1],['Stealth mode',0],['AirDrop visibility',1],['Guest account',1],['Automatic login',1],['Automatic updates',1],['Malware definitions',1],['Custom root certificates',1],['Configuration profiles',1],['Proxy',1],['Your account',1],['Share analytics with Apple',1],['Visible as',1],['Device management',1],['System extensions',1],['Someone connected',1],['Keystroke access',0],['This network',1],['VPN',1]];
+const CHECKS=[['Disk encryption',1,'FileVault on'],['Firewall',1,'On'],['Stealth mode',0,'Off'],['Gatekeeper',1,'On'],
+['System integrity',1,'On'],['Screen lock',1,'Immediately'],['Sharing services',1,'None on'],['Apps open to the network',0,'node:3000'],
+['Software updates',1,'None pending'],['Automatic updates',1,'Install automatically'],['Malware definitions',1,'v5358 · 12d'],
+['AirDrop visibility',1,'Contacts Only'],['Guest account',1,'Off'],['Automatic login',1,'Off'],['Custom root certificates',1,'None'],
+['Configuration profiles',1,'1 installed'],['Proxy',1,'None'],['Your account',1,'Standard'],['Share analytics with Apple',1,'Off'],
+['Visible as',1,"Sai's MacBook Pro"],['Device management',1,'Not enrolled'],['System extensions',1,'1 active'],
+['Someone connected',1,'No one'],['Keystroke access',0,'Command X'],['This network',1,'Home · WPA3'],['VPN',1,'Not connected']];
 
 const CANT=[['It does not block anything','Blocking needs Apple’s network-extension entitlement, which needs a paid account. LuLu and Little Snitch do that job well. Argus tells you what they cannot.'],
  ['It does not inspect traffic','No packet capture, no DNS filtering, no idea what your apps send. It reads your Mac’s own state and the shape of the network.'],
@@ -350,8 +370,8 @@ const sig=document.getElementById('sig');
 SIGNALS.forEach(([k,t,d])=>{const e=document.createElement('div');e.className='c';
   e.innerHTML='<div class="t"><s style="background:var(--'+(k==='a'?'amber':'green')+')"></s>'+t+'</div><p>'+d+'</p>';sig.appendChild(e)});
 const ch=document.getElementById('checks');
-CHECKS.forEach(([t,ok])=>{const e=document.createElement('div');e.className='chk';
-  e.innerHTML='<s style="background:var(--'+(ok?'green':'amber')+')"></s>'+t;ch.appendChild(e)});
+CHECKS.forEach(([t,ok,v])=>{const e=document.createElement('div');e.className='chk';
+  e.innerHTML='<s style="background:var(--'+(ok?'green':'amber')+')"></s><em>'+t+'</em><u>'+v+'</u>';ch.appendChild(e)});
 const cn=document.getElementById('cant');
 CANT.forEach(([t,d])=>{const e=document.createElement('div');e.className='c';e.innerHTML='<div class="t">'+t+'</div><p>'+d+'</p>';cn.appendChild(e)});
 
@@ -380,7 +400,8 @@ function path(bodyW,depth,ear,bot){
 }
 let st={d:0,w:NW,ear:6,bot:12};
 function draw(){npath.setAttribute('d',path(st.w,st.d,st.ear,st.bot));
-  ncontent.style.top=NH+'px';ncontent.style.width=st.w+'px';ncontent.style.height=Math.max(0,st.d)+'px'}
+  ncontent.style.top=NH+'px';ncontent.style.width=st.w+'px';ncontent.style.height=Math.max(0,st.d)+'px';
+  ncontent.style.borderRadius='0 0 '+st.bot+'px '+st.bot+'px'}
 function tween(to,ms){return new Promise(res=>{const from={...st},t0=performance.now();
   (function f(t){const k=Math.min(1,(t-t0)/ms),e=1-Math.pow(1-k,3);
     for(const key in to)st[key]=from[key]+(to[key]-from[key])*e;draw();k<1?requestAnimationFrame(f):res()})(t0)})}
@@ -392,62 +413,104 @@ const ICON={wifi:'<path d="M2 8.5a15 15 0 0120 0M5.5 12a10 10 0 0113 0M9 15.5a5 
  key:'<circle cx="8" cy="12" r="3.4"/><path d="M11.4 12H21M18 12v3.2M15 12v2.4"/>',
  router:'<rect x="3" y="12" width="18" height="8" rx="2"/><path d="M7 12V9a5 5 0 0110 0v3"/><circle cx="8" cy="16" r="1" fill="currentColor" stroke="none"/>'};
 const SCENES=[
- {c:'amber',i:'wifi',t:'Open Wi-Fi: Airport Free WiFi',d:'No encryption. Anyone nearby can read unencrypted traffic. Use a VPN here.'},
- {c:'amber',i:'lock',t:'VPN dropped',d:'You are on Hotel Guest directly now. Reconnect if you meant to stay tunnelled.'},
- {c:'green',i:'wave',t:'node is reachable from this network',d:'It started listening on port 3000 on every interface. Bind it to localhost if that was not intended.'},
- {board:true,t:'Status board',d:'Twenty-six checks on one screen. Two need attention: a dev server open to the network, and stealth mode off.'},
- {c:'amber',i:'router',t:'Router identity changed',d:'The gateway at 10.0.0.1 now answers from different hardware. That is what ARP spoofing looks like.'},
- {c:'green',i:'cam',t:'Camera turned on',d:'Something started using the camera. Argus cannot name the app, and does not pretend to.'},
- {c:'amber',i:'key',t:'An app is reading your keystrokes',d:'Command X installed a keyboard event tap. Signed by Sindre Sorhus. Normal for shortcut tools.'}];
+ {c:'amber',i:'wifi',t:'Open Wi-Fi: Airport Free WiFi',d:'No encryption. Anyone nearby can read unencrypted traffic. Use a VPN here.',m:'OPEN · en0 · GW 172.16.0.1'},
+ {c:'amber',i:'lock',t:'VPN dropped',d:'You are on Hotel Guest directly now. Reconnect if you meant to stay tunnelled.',m:'WPA2 · en0 · GW 10.1.0.1'},
+ {stats:true,t:'Always-on stats',d:'An optional strip under the notch with live processor load, memory, network throughput and Wi-Fi signal. Off by default.'},
+ {c:'green',i:'wave',t:'node is reachable from this network',d:'It started listening on port 3000 on every interface. Bind it to localhost if that was not intended.',m:'WPA3 · en0 · GW 10.0.0.1'},
+ {board:true,t:'Status board',d:'Twenty-six checks on one screen, each with the value behind it. Three need attention here: a dev server open to the network, stealth mode off, and an app reading keystrokes.'},
+ {c:'amber',i:'router',t:'Router identity changed',d:'The gateway at 10.0.0.1 now answers from different hardware. That is what ARP spoofing looks like.',m:'WPA3 · en0 · GW 10.0.0.1'},
+ {c:'green',i:'cam',t:'Camera turned on',d:'Something started using the camera. Argus cannot name the app, and does not pretend to.',m:'WPA3 · en0 · HOME'},
+ {c:'amber',i:'key',t:'An app is reading your keystrokes',d:'Command X installed a keyboard event tap. Signed by Sindre Sorhus. Normal for shortcut tools.',m:'WPA3 · en0 · HOME'}];
+const HEX={amber:'#ff9e42',green:'#61eb9e',cyan:'#5cdbff'};
+function clock(){const d=new Date();return [d.getHours(),d.getMinutes(),d.getSeconds()].map(n=>String(n).padStart(2,'0')).join(':')}
+function hairline(col){return '<div class="nhair" style="left:'+px(14)+'px;right:'+px(14)+'px;--nhc:'+col+'"></div>'}
 function px(pt){return Math.max(1,pt*SC)}
-/* Type inside the notch is sized from the app's real point sizes, with a floor so it stays
-   legible on small screens. The notch itself is never scaled up to make room for it. */
 function fs(pt,floor){return Math.max(floor,pt*SC)}
 function renderCard(s){
-  const col=s.c==='amber'?'232,167,101':'122,214,164';
-  const ic=Math.max(11,px(26)), tSize=fs(13,7.5), bSize=fs(11,6.5);
-  const room=tSize>=8.2;                      // below this the second line stops being readable
-  ncontent.innerHTML='<div class="ncard" style="gap:'+Math.max(5,px(11))+'px;padding:'+Math.max(6,px(13))+'px '+Math.max(7,px(16))+'px 0">'+
-    '<div class="ic" style="width:'+ic+'px;height:'+ic+'px;color:var(--'+s.c+');background:rgba('+col+',.14)">'+
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:'+(ic*.6)+'px;height:'+(ic*.6)+'px">'+ICON[s.i]+'</svg></div>'+
-    '<div class="ntext" style="flex:1;min-width:0">'+
-      '<h4 style="font-size:'+tSize+'px;line-height:1.25;margin:0 0 '+px(3)+'px">'+s.t+'</h4>'+
-      (room?'<p style="font-size:'+bSize+'px;line-height:1.4;margin:0">'+s.d+'</p>':'')+
-    '</div></div>';
+  const col=HEX[s.c], ic=Math.max(12,px(30)), tSize=fs(13,7.5), bSize=fs(11,6.5), mSize=fs(9.5,6);
+  const room=tSize>=8.2, ring=Math.max(10,px(22)), r=ring/2-Math.max(.8,px(1.6));
+  ncontent.innerHTML=hairline(HEX.cyan)+
+    '<div class="ncard" style="gap:'+Math.max(5,px(12))+'px;padding:'+Math.max(6,px(14))+'px '+Math.max(7,px(16))+'px 0">'+
+      '<div class="ic" style="width:'+ic+'px;height:'+ic+'px;color:'+col+'">'+
+        '<b style="inset:0"></b><b style="inset:'+(ic*.2)+'px"></b>'+
+        '<u style="width:'+(ic*.26)+'px;height:'+(ic*.26)+'px;box-shadow:0 0 '+px(6)+'px '+col+'"></u></div>'+
+      '<div style="flex:1;min-width:0">'+
+        '<h4 style="font-size:'+tSize+'px;line-height:1.3;margin:0 0 '+px(3)+'px">'+s.t+'</h4>'+
+        (room?'<p style="font-size:'+bSize+'px;line-height:1.4;margin:0">'+s.d+'</p>':'')+
+        '<div class="nmeta" style="font-size:'+mSize+'px;color:'+col+';margin-top:'+px(9)+'px">'+s.m+' · '+clock()+'</div>'+
+      '</div>'+
+      '<svg class="nring" width="'+ring+'" height="'+ring+'" viewBox="0 0 '+ring+' '+ring+'">'+
+        '<circle cx="'+ring/2+'" cy="'+ring/2+'" r="'+r+'" fill="none" stroke="'+col+'" stroke-opacity=".22" stroke-width="'+Math.max(.8,px(1.6))+'"/>'+
+        '<circle cx="'+ring/2+'" cy="'+ring/2+'" r="'+r+'" fill="none" stroke="'+col+'" stroke-width="'+Math.max(.8,px(1.6))+'" stroke-linecap="round"'+
+        ' stroke-dasharray="'+(2*Math.PI*r)+'" stroke-dashoffset="'+(2*Math.PI*r*0.28)+'"/></svg>'+
+    '</div>';
 }
 function renderBoard(){
-  const lSize=fs(10,6.5), dot=Math.max(2.5,px(6)), rows=lSize>=7.4?14:10;
-  ncontent.innerHTML='<div style="padding:'+Math.max(6,px(13))+'px '+Math.max(7,px(16))+'px 0">'+
-    '<div class="nhead" style="font-size:'+fs(8,5.5)+'px;letter-spacing:.1em;margin-bottom:'+px(8)+'px">'+
-      '<span style="color:var(--accent)">SYSTEM STATUS</span>'+
-      '<span style="color:var(--amber)">2 NEED ATTENTION</span></div>'+
-    '<div class="nrows" style="gap:'+px(5)+'px '+px(24)+'px;font-size:'+lSize+'px">'+
-    CHECKS.slice(0,rows).map(([t,ok])=>'<div class="nrow" style="gap:'+Math.max(3,px(7))+'px">'+
-      '<s style="width:'+dot+'px;height:'+dot+'px;background:var(--'+(ok?'green':'amber')+')"></s>'+
-      '<em>'+t+'</em><u>'+(ok?'ok':'check')+'</u></div>').join('')+
-    '</div></div>';
+  const lSize=fs(10,6.3), dot=Math.max(2.5,px(6)), rows=lSize>=6.4?16:10;
+  const bad=CHECKS.filter(c=>!c[1]).length;
+  ncontent.innerHTML=hairline(HEX.cyan)+
+    '<div style="padding:'+Math.max(6,px(14))+'px '+Math.max(7,px(16))+'px 0">'+
+    '<div class="nhead" style="font-size:'+fs(8.5,5.5)+'px;margin-bottom:'+px(9)+'px">'+
+      '<span style="color:'+HEX.cyan+'">SYSTEM STATUS</span>'+
+      '<span style="color:'+HEX.amber+'">'+bad+' NEED ATTENTION</span></div>'+
+    '<div class="nrows" style="gap:'+px(5)+'px '+px(26)+'px;font-size:'+lSize+'px">'+
+    CHECKS.slice(0,rows).map(([t,ok,v])=>'<div class="nrow" style="gap:'+Math.max(3,px(7))+'px">'+
+      '<s style="width:'+dot+'px;height:'+dot+'px;background:'+(ok?HEX.green:HEX.amber)+';box-shadow:0 0 '+px(5)+'px '+(ok?HEX.green:HEX.amber)+'"></s>'+
+      '<em>'+t+'</em><u>'+v+'</u></div>').join('')+
+    '</div>'+
+    '<div class="nmeta" style="font-size:'+fs(9,5.8)+'px;color:'+HEX.cyan+';opacity:.8;margin-top:'+px(10)+'px">WPA3 · en0 · GW 10.0.0.1 · '+clock()+'</div>'+
+    '</div>';
+}
+/* The always-on strip: one centred monospace line, exactly the parts the app draws. */
+function renderStats(){
+  const lab=fs(9,6), val=fs(10,6.6);
+  const part=(n,v,c)=>'<i style="font-size:'+lab+'px">'+n+'</i>&nbsp;<b style="font-size:'+val+'px;color:'+c+'">'+v+'</b>';
+  ncontent.innerHTML='<div class="nstats">'+
+    [part('CPU','12%',HEX.cyan),part('MEM','8.4G','#f5f5f5'),part('NET','↓1.2M ↑340K','#f5f5f5'),part('WIFI','▮▮▮▯ 866M','#f5f5f5')]
+      .join('<s style="font-size:'+lab+'px">&nbsp;&nbsp;·&nbsp;&nbsp;</s>')+'</div>';
 }
 function renderReadout(s){
-  readout.innerHTML='<span class="dot" style="background:var(--'+(s.board?'accent':s.c)+')"></span><div><b>'+s.t+'</b><span>'+s.d+'</span></div>';
+  readout.innerHTML='<span class="dot" style="background:var(--'+(s.board||s.stats?'accent':s.c)+')"></span><div><b>'+s.t+'</b><span>'+s.d+'</span></div>';
+}
+/* drawStats() sizes the real strip to its text, clamped to 260-560 pt. Same here, or the
+   line gets clipped at both ends. */
+function statsWidth(){
+  const el=ncontent.querySelector('.nstats');
+  if(!el) return 380*SC;
+  const prev=ncontent.style.width;
+  ncontent.style.width='2400px';
+  const w=el.scrollWidth+30*SC;
+  ncontent.style.width=prev;
+  return Math.max(260*SC,Math.min(560*SC,w));
 }
 function contentDepth(){
   const prev=ncontent.style.height;
   ncontent.style.height='auto';
-  const h=ncontent.firstElementChild?ncontent.firstElementChild.getBoundingClientRect().height:0;
+  // scrollHeight, not firstElementChild: the cyan hairline is the first child and is 1px tall.
+  const h=ncontent.scrollHeight;
   ncontent.style.height=prev;
   return Math.round(h+Math.max(6,px(13)));   // the card's bottom padding
 }
+/* Each scene has the width and the dwell the app itself uses; the stats strip is a shallow
+   24 pt band, the board is wide, a card sits between them. */
+function shape(s){
+  if(s.stats) return {w:300*SC, depth:24*SC, dwell:4200};
+  if(s.board) return {w:820*SC, depth:null,   dwell:5200};
+  return {w:600*SC, depth:null, dwell:4000};
+}
+function paint(s){ s.stats?renderStats():s.board?renderBoard():renderCard(s) }
 async function loop(){
   let i=0;
   while(true){
     const s=SCENES[i%SCENES.length];i++;
-    const isBoard=!!s.board;
-    st.w=(isBoard?820:600)*SC; st.ear=px(14); st.bot=px(26); draw();
-    isBoard?renderBoard():renderCard(s);
+    const sh=shape(s);
+    st.w=sh.w; st.ear=px(14); st.bot=px(26); draw();
+    paint(s);
+    if(s.stats){ st.w=statsWidth(); draw() }
     ncontent.style.opacity=0; renderReadout(s);
-    await tween({d:contentDepth()},520);
+    await tween({d:sh.depth!==null?sh.depth:contentDepth()},520);
     ncontent.animate([{opacity:0},{opacity:1}],{duration:260,fill:'forwards'});ncontent.style.opacity=1;
-    await new Promise(r=>setTimeout(r,isBoard?4600:3800));
+    await new Promise(r=>setTimeout(r,sh.dwell));
     ncontent.animate([{opacity:1},{opacity:0}],{duration:200,fill:'forwards'});
     await new Promise(r=>setTimeout(r,200));
     await tween({d:0},380);
