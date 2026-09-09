@@ -2,6 +2,8 @@ test/out/
 dist/
 clips_retired/
 tools3d/renders/
+app/Ledge
+app/Ledge.app/
 app/NotchParade
 app/NotchParade.app/
 __pycache__/

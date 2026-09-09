@@ -1,4 +1,4 @@
-// Notch Parade — minimal AppKit shell. Build: ./build.sh && open NotchParade.app
+// Ledge — minimal AppKit shell. Build: ./build.sh && open Ledge.app
 // A transparent panel sits over the notch; a black layer masked to Apple's notch silhouette (flared ears at the
 // top, rounded bottom) plays pixel frames with nearest-neighbour scaling. The art canvas is the whole shape and the
 // hardware notch occludes its top centre, so clips can hang from it, climb it, and hide behind it.
@@ -53,7 +53,7 @@ final class App: NSObject, NSApplicationDelegate {
         else { clipsDir = URL(fileURLWithPath: NSHomeDirectory() + "/Documents/notch-parade/clips") }
         if let d = try? Data(contentsOf: clipsDir.appendingPathComponent("manifest.json")),
            let m = try? JSONDecoder().decode([ClipMeta].self, from: d) { clips = m }
-        NSLog("NotchParade: %d clips from %@", clips.count, clipsDir.path)
+        NSLog("Ledge: %d clips from %@", clips.count, clipsDir.path)
 
         let screen = NSScreen.screens.first { $0.safeAreaInsets.top > 0 } ?? NSScreen.main!
         notch = notchRect(screen)
@@ -91,7 +91,7 @@ final class App: NSObject, NSApplicationDelegate {
         login.state = SMAppService.mainApp.status == .enabled ? .on : .off
         menu.addItem(login)
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Quit Notch Parade", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        menu.addItem(withTitle: "Quit Ledge", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         status.menu = menu
 
         scheduleVisitor()
