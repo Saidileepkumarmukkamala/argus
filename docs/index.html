@@ -61,7 +61,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
         Download for Mac
       </a>
-      <span class="meta">Version 1.0 · 864 KB · no account, no telemetry, no network access</span>
+      <span class="meta">Version 1.0.1 · 873 KB · no account, no telemetry, no network access</span>
     </div>
     <div class="screen"><img src="assets/hero_poster.jpg" alt="Ledge warning about an open Wi-Fi network, shown in the notch"></div>
     <p class="caption">The shape is the app. It opens out of the hardware notch when something changes and closes when you click anywhere.</p>
@@ -105,7 +105,7 @@
       <div class="card"><b>It isn't antivirus</b><span>It sees persistence and notarization, which is where most Mac malware shows up first, but it doesn't scan files.</span></div>
       <div class="card"><b>It can't see privacy grants</b><span>Which apps have Accessibility or Screen Recording rights is locked behind Full Disk Access. Ledge doesn't ask for it.</span></div>
       <div class="card"><b>Wi-Fi names need Location</b><span>macOS hides network names from apps without Location access. Ledge identifies networks by their router instead, and only asks for Location if you want names.</span></div>
-      <div class="card"><b>It isn't notarized</b><span>Same paid account. First launch needs a right-click. The source is short enough to read, and you can build it yourself in ten seconds; see below.</span></div>
+      <div class="card"><b>It isn't notarized</b><span>Same paid account. macOS blocks the first launch until you clear the download flag or click Open Anyway; the install steps below show both. The source is short enough to read and builds in seconds.</span></div>
     </div>
   </section>
 
@@ -134,17 +134,22 @@
   <section id="install">
     <h2>Install</h2>
     <ol class="steps">
-      <li><div>Download, unzip, drag <b>Ledge</b> into Applications.</div></li>
-      <li><div>First launch only: right-click, <b>Open</b>, then <b>Open</b> again. (Not notarized; see above.)</div></li>
-      <li><div>Nothing happens until something changes. Click the notch for the board. On your own network, use the menu-bar shield to <b>Mark this network as Home</b> so new devices get announced.</div></li>
+      <li><div>Download, unzip, and drag <b>Ledge</b> into your Applications folder.</div></li>
+      <li><div>Ledge isn't notarized by Apple, so macOS blocks it on first launch. Open Terminal and run the line below. It removes the "downloaded from the internet" flag from this one app, nothing else:
+        <div style="margin-top:8px"><code>xattr -dr com.apple.quarantine /Applications/Ledge.app</code></div>
+        <div style="margin-top:8px; color:var(--muted); font-size:14px">Prefer not to use Terminal? Double-click Ledge, then open System Settings › Privacy &amp; Security, scroll to the bottom and click <b>Open Anyway</b>. On macOS 15 and later the old right-click → Open shortcut no longer works for apps like this one.</div>
+      </div></li>
+      <li><div>Open Ledge. A shield appears in the menu bar; a dot on it means something needs attention. Nothing else happens until something changes. Click the notch for the status board.</div></li>
+      <li><div>On your own Wi-Fi, use the menu-bar shield to <b>Mark this network as Home</b>, so Ledge announces devices that join it.</div></li>
     </ol>
+    <p class="sub" style="margin-top:16px">Why the extra step: notarizing an app requires a paid Apple Developer account, which this free project doesn't have. That is also why the checksum and the full source are published below, so you never have to take the download on trust.</p>
   </section>
 
   <section id="verify">
     <h2>Verify, or build it yourself</h2>
     <p class="sub">Every release publishes its SHA-256. The whole app is four Swift files and builds with Apple's command-line tools.</p>
 <pre>shasum -a 256 ~/Downloads/Ledge.zip
-# 1.0 → cbf55847c15f8e0af1bb07d4350f66333afdfc2b330529ccb443b76cceaf0a1f
+# 1.0.1 → 910b54152bfae4f121f28cc2a7dbc7815d7bb7df09f4031bf9e71be68a70a8ab
 
 git clone https://github.com/Saidileepkumarmukkamala/ledge && cd ledge/app && ./build.sh && open Ledge.app</pre>
     <p class="sub" style="margin-top:12px">Everything Ledge reads comes from public macOS tools you can run yourself: <span class="mono">route, ifconfig, arp, scutil, lsof, fdesetup, socketfilterfw, spctl, csrutil, sysadminctl, profiles, security, systemextensionsctl, sfltool, defaults</span>. The only connection it can make is the optional HTTPS check, off by default.</p>

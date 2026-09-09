@@ -15,6 +15,18 @@ struct NetInfo: Equatable {
 }
 
 enum Collect {
+    /// Time-to-live cache for the few probes that are comparatively slow. Everything Ledge runs works as a normal user:
+    /// nothing here needs root, so macOS never shows an authorisation dialog.
+    private static var cache: [String: (value: Any, at: Date)] = [:]
+    private static let cacheLock = NSLock()
+    static func cached<T>(_ key: String, ttl: TimeInterval, _ make: () -> T) -> T {
+        cacheLock.lock()
+        if let e = cache[key], Date().timeIntervalSince(e.at) < ttl, let v = e.value as? T { cacheLock.unlock(); return v }
+        cacheLock.unlock()
+        let v = make()
+        cacheLock.lock(); cache[key] = (v, Date()); cacheLock.unlock()
+        return v
+    }
     static func normalizeMAC(_ s: String) -> String {
         s.split(separator: ":").map { String(format: "%02x", Int($0, radix: 16) ?? 0) }.joined(separator: ":")
     }
@@ -126,9 +138,14 @@ enum Collect {
         for dir in ["\(home)/Library/LaunchAgents", "/Library/LaunchAgents", "/Library/LaunchDaemons"] {
             for f in (try? FileManager.default.contentsOfDirectory(atPath: dir)) ?? [] where f.hasSuffix(".plist") { items.append((dir.hasPrefix(home) ? "~" : "") + dir.split(separator: "/").last! + "/" + f) }
         }
-        for line in sh("/usr/bin/sfltool", ["dumpbtm"], timeout: 10).split(separator: "\n") {
-            let t = line.trimmingCharacters(in: .whitespaces)
-            if t.hasPrefix("Name:") { let n = t.dropFirst(5).trimmingCharacters(in: .whitespaces); if !n.isEmpty && n != "(null)" { items.append("login item " + n) } }
+        // Deliberately NOT sfltool dumpbtm: it requires root and pops an authorisation dialog. launchctl lists what is
+        // actually loaded in this user's session and needs no privileges at all.
+        for line in sh("/bin/launchctl", ["list"], timeout: 8).split(separator: "\n").dropFirst() {
+            let cols = line.split(separator: "\t", omittingEmptySubsequences: false).map(String.init)
+            guard cols.count >= 3 else { continue }
+            let label = cols[2].trimmingCharacters(in: .whitespaces)
+            guard !label.isEmpty, !label.hasPrefix("com.apple."), !label.hasPrefix("application.") else { continue }
+            items.append("job " + label)
         }
         return Array(Set(items)).sorted()
     }
@@ -137,9 +154,10 @@ enum Collect {
         let a = sh("/usr/bin/security", ["dump-trust-settings", "-d"]), u = sh("/usr/bin/security", ["dump-trust-settings"])
         return (a + u).components(separatedBy: "Cert ").count - 1
     }
-    static func profilesCount() -> Int { Int(firstMatch(sh("/usr/bin/profiles", ["list"]), #"There are (\d+)"#) ?? "0") ?? 0 }
+    static func profilesCount() -> Int { cached("profiles", ttl: 1800) { Int(firstMatch(sh("/usr/bin/profiles", ["list"]), #"There are (\d+)"#) ?? "0") ?? 0 } }
     static func airdrop() -> String { let v = sh("/usr/bin/defaults", ["read", "com.apple.sharingd", "DiscoverableMode"]).trimmingCharacters(in: .whitespacesAndNewlines); return v.isEmpty || v.contains("does not exist") ? "Contacts Only (default)" : v }
-    static func xprotect() -> (version: String, days: Int) {
+    static func xprotect() -> (version: String, days: Int) { cached("xprotect", ttl: 3600) { xprotectRaw() } }
+    private static func xprotectRaw() -> (version: String, days: Int) {
         let p = "/Library/Apple/System/Library/CoreServices/XProtect.bundle/Contents/Info.plist"
         let v = sh("/usr/bin/defaults", ["read", p, "CFBundleShortVersionString"]).trimmingCharacters(in: .whitespacesAndNewlines)
         let m = (try? FileManager.default.attributesOfItem(atPath: p)[.modificationDate] as? Date) ?? Date()
@@ -160,8 +178,9 @@ enum Collect {
         if issuer.isEmpty { return (true, "", false) }                  // couldn't tell (offline); don't alarm
         return (issuer.contains("Apple Inc"), issuer, false)
     }
-    static func sudoWithoutPassword() -> Bool { let o = sh("/usr/bin/sudo", ["-n", "true"], timeout: 5); return !o.contains("password") && !o.contains("sudo:") }
-    static func mdm() -> String { let o = sh("/usr/bin/profiles", ["status", "-type", "enrollment"]); return firstMatch(o, #"MDM enrollment:\s*(.+)"#)?.trimmingCharacters(in: .whitespaces) ?? "Unknown" }
+    static func mdm() -> String {
+        cached("mdm", ttl: 3600) { firstMatch(sh("/usr/bin/profiles", ["status", "-type", "enrollment"]), #"MDM enrollment:\s*(.+)"#)?.trimmingCharacters(in: .whitespaces) ?? "Unknown" }
+    }
     static func systemExtensions() -> [String] {
         sh("/usr/bin/systemextensionsctl", ["list"]).split(separator: "\n").compactMap { line -> String? in
             let s = String(line); guard s.hasPrefix("\t") || s.hasPrefix(" "), s.contains("["), let id = firstMatch(s, #"\s([a-zA-Z0-9.\-]+\.[a-zA-Z0-9\-]+) \("#) else { return nil }; return id }
@@ -220,10 +239,6 @@ enum Collect {
         let analytics = defaultsInt("/Library/Application Support/CrashReporter/DiagnosticMessagesHistory.plist", "AutoSubmit") ?? 0
         rows.append(.init(label: "Share analytics with Apple", ok: true, value: analytics == 1 ? "On" : "Off", hint: ""))
         rows.append(.init(label: "Visible as", ok: true, value: computerName(), hint: "Your Mac's name on every network"))
-        if !quick {
-            let np = sudoWithoutPassword()
-            rows.append(.init(label: "Admin (sudo)", ok: !np, value: np ? "No password needed" : "Asks for password", hint: "Password-less sudo lets any script become root"))
-        }
         let m = mdm()
         rows.append(.init(label: "Device management", ok: true, value: m.hasPrefix("No") ? "Not enrolled" : m, hint: "An MDM can read settings and install profiles"))
         let ext = systemExtensions()
@@ -238,8 +253,22 @@ enum Collect {
 /// Watches the signals on timers and turns changes into a small number of plain-English alerts.
 final class Monitor {
     var onAlert: ((Alert) -> Void)?
+    var onPosture: (([Collect.PostureRow]) -> Void)?
     var net = NetInfo(); var vpn: Bool? = nil; var dns: [String] = []; var locationAllowed = false
     private var vpnCandidate: Bool? = nil; private var lastTransition = Date.distantPast
+    /// The status board is expensive (~20 short shell calls). It is computed off the main thread and cached, so a
+    /// click renders instantly and the fresh result swaps in when it arrives.
+    private(set) var cachedPosture: [Collect.PostureRow] = []
+    private var postureBusy = false
+    func refreshPosture(_ done: (([Collect.PostureRow]) -> Void)? = nil) {
+        if postureBusy { return }
+        postureBusy = true
+        q.async { [weak self] in
+            guard let s = self else { return }
+            let rows = Collect.posture(net: s.net, vpn: s.vpn ?? false)
+            DispatchQueue.main.async { s.cachedPosture = rows; s.postureBusy = false; s.onPosture?(rows); done?(rows) }
+        }
+    }
     private var started = false
     let q = DispatchQueue(label: "ledge.monitor", qos: .utility)
 
@@ -258,6 +287,7 @@ final class Monitor {
         let fast = ProcessInfo.processInfo.environment["LEDGE_FAST"] != nil          // test knob: minute timers become seconds
         schedule(fast ? 15 : 60) { self.fastTick() }; schedule(fast ? 15 : 60) { self.mediumTick() }; schedule(fast ? 60 : 300) { self.slowTick() }; schedule(fast ? 30 : 600) { self.integrityTick(first: false) }
         let fresh = Store.shared.state.networks.isEmpty
+        refreshPosture()
         q.async { self.fastTick(); self.mediumTick(first: true); self.integrityTick(first: true)
             if fresh { self.emit(.notice, "Ledge is watching", "Network changes, VPN, and what your Mac exposes. Click the notch any time for the status board.", key: "welcome", minGap: 1) } }
     }
@@ -284,7 +314,7 @@ final class Monitor {
         if st.state.events.count > 40 { st.state.events.removeFirst(st.state.events.count - 40) }
         st.save()
         NSLog("alert [%@] %@ — %@", key, title, detail)
-        DispatchQueue.main.async { self.onAlert?(a) }
+        DispatchQueue.main.async { self.onAlert?(a); self.refreshPosture() }
     }
 
     func fastTick() {

@@ -34,8 +34,18 @@ func notchPath(bodyWidth: CGFloat, depth: CGFloat, top: CGFloat, bottom: CGFloat
 
 final class ClickView: NSView {
     var onClick: (() -> Void)?
+    var onHover: ((Bool) -> Void)?
+    private var tracking: NSTrackingArea?
     override func mouseDown(with e: NSEvent) { onClick?() }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let t = tracking { removeTrackingArea(t) }
+        let t = NSTrackingArea(rect: bounds, options: [.mouseEnteredAndExited, .activeAlways], owner: self)
+        addTrackingArea(t); tracking = t
+    }
+    override func mouseEntered(with e: NSEvent) { onHover?(true) }
+    override func mouseExited(with e: NSEvent) { onHover?(false) }
 }
 
 enum Theme {
@@ -56,6 +66,32 @@ func label(_ text: String, size: CGFloat, weight: NSFont.Weight, color: NSColor,
 }
 
 final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSMenuDelegate {
+    /// The menu bar's own appearance is unreliable here: on this machine the status button reports VibrantLight while
+    /// the system is in Dark mode and the bar is drawn dark, so a template image paints black and disappears. Draw the
+    /// symbol in an explicit colour instead, chosen from the system's interface style, and re-render when it changes.
+    static func systemIsDark() -> Bool {
+        (UserDefaults.standard.string(forKey: "AppleInterfaceStyle") ?? "").lowercased().contains("dark")
+    }
+    static func shieldIcon(_ color: NSColor, badge: Bool = false) -> NSImage? {
+        let cfg = NSImage.SymbolConfiguration(pointSize: 15, weight: .semibold)
+        guard let base = NSImage(systemSymbolName: "shield.lefthalf.filled", accessibilityDescription: "Ledge")?.withSymbolConfiguration(cfg) else { return nil }
+        // NSImage(size:flipped:drawingHandler:) re-draws on demand and works in every context; lockFocus is deprecated
+        // and can silently yield an empty image for a status item.
+        let size = NSSize(width: base.size.width + (badge ? 5 : 0), height: base.size.height)
+        let out = NSImage(size: size, flipped: false) { rect in
+            let iconRect = NSRect(x: 0, y: 0, width: base.size.width, height: base.size.height)
+            base.draw(in: iconRect)
+            color.set()
+            iconRect.fill(using: .sourceAtop)
+            if badge {                                   // small amber dot; the shield itself stays legible
+                Theme.amber.setFill()
+                NSBezierPath(ovalIn: NSRect(x: rect.maxX - 4.5, y: rect.maxY - 4.5, width: 4.5, height: 4.5)).fill()
+            }
+            return true
+        }
+        out.isTemplate = false
+        return out
+    }
     func menuNeedsUpdate(_ menu: NSMenu) { rebuildMenu(); status.menu?.delegate = self }
     var panel: NotchPanel!
     let mask = CAShapeLayer()
@@ -90,16 +126,34 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
         view.layer?.backgroundColor = NSColor.black.cgColor
         mask.path = closedPath(in: closedRect().size); view.layer?.mask = mask
         view.onClick = { [weak self] in self?.clicked() }
+        // Reading the board shouldn't be a race against a timer: hovering holds it open, leaving restarts the countdown.
+        view.onHover = { [weak self] inside in
+            guard let s = self, s.depth > 0 else { return }
+            if inside { s.hideTimer?.invalidate(); s.ring.removeAnimation(forKey: "drain") }
+            else { s.armHide(s.boardViews.isEmpty ? 6 : 12) }
+        }
         buildLayers()
         for v in [glyph, title, detail, meta] { v.isHidden = true; view.addSubview(v) }
         panel.contentView = view; panel.orderFrontRegardless()
 
         status = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        status.button?.image = NSImage(systemSymbolName: "shield.lefthalf.filled", accessibilityDescription: "Ledge")
+        // isTemplate lets macOS paint the icon for the current menu bar (white on dark, black on light).
+        // Without it the symbol keeps its own colour and disappears against a dark menu bar.
+        applyTint([])
+        if status.button?.image == nil { status.button?.title = "◆" }          // never let the item be invisible
+        DistributedNotificationCenter.default.addObserver(forName: Notification.Name("AppleInterfaceThemeChangedNotification"), object: nil, queue: .main) { [weak self] _ in
+            guard let s = self else { return }; s.applyTint(s.monitor.cachedPosture)
+        }
+        // Plugging in a monitor, closing the lid or changing resolution moves the notch. Without this the panel keeps
+        // drawing at the old coordinates, i.e. in the middle of nowhere.
+        NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
+            self?.screenChanged()
+        }
         rebuildMenu(); status.menu?.delegate = self
         loc.delegate = self
         monitor.locationAllowed = loc.authorizationStatus == .authorizedAlways || loc.authorizationStatus == .authorized
         monitor.onAlert = { [weak self] a in self?.show(a) }
+        monitor.onPosture = { [weak self] rows in self?.applyTint(rows) }
         monitor.start()
         NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didLaunchApplicationNotification, object: nil, queue: .main) { [weak self] n in
             guard let app = n.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication, let url = app.bundleURL, let bid = app.bundleIdentifier else { return }
@@ -109,6 +163,10 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
         tintTimer = Timer.scheduledTimer(withTimeInterval: 1800, repeats: true) { [weak self] _ in self?.refreshTint() }
         // Click anywhere else on the screen: close. (Mouse monitors need no permissions; key monitors would.)
         NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in if let s = self, s.depth > 0 { s.hide() } }
+        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] e in
+            if e.keyCode == 53, let s = self, s.depth > 0 { s.hide(); return nil }      // Escape
+            return e
+        }
         DispatchQueue.main.asyncAfter(deadline: .now() + 20) { self.refreshTint() }
         if ProcessInfo.processInfo.environment["LEDGE_DEMO"] != nil { demo() }
     }
@@ -142,6 +200,23 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
         sweep.add(a, forKey: "x"); sweep.add(o, forKey: "o")
     }
 
+    /// Recompute the notch for whatever screen is now the built-in one and re-seat the panel.
+    func screenChanged() {
+        guard let screen = NSScreen.screens.first(where: { $0.safeAreaInsets.top > 0 }) ?? NSScreen.main else { return }
+        let newNotch = notchRect(screen)
+        guard newNotch != notch else { return }
+        notch = newNotch
+        hideTimer?.invalidate(); hideTimer = nil
+        for v in [glyph, title, detail, meta] { v.isHidden = true }
+        clearBoard(); ring.isHidden = true; pulse.isHidden = true
+        depth = 0; gen += 1
+        panel.setFrame(closedRect(), display: false)
+        view.frame = NSRect(origin: .zero, size: closedRect().size)
+        mask.removeAllAnimations(); mask.path = closedPath(in: closedRect().size)
+        panel.orderFrontRegardless()
+        NSLog("screen changed: notch now %@", NSStringFromRect(notch))
+    }
+
     // MARK: geometry
     func notchRect(_ s: NSScreen) -> NSRect {
         let top = s.safeAreaInsets.top
@@ -154,8 +229,9 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
     func openPath(_ d: CGFloat, in size: CGSize) -> CGPath { notchPath(bodyWidth: bodyW, depth: notch.height + d, top: earOpen, bottom: bottomOpen, in: size) }
     func closedPath(in size: CGSize) -> CGPath { notchPath(bodyWidth: notch.width, depth: notch.height, top: earClosed, bottom: bottomClosed, in: size) }
 
-    func setDepth(_ d: CGFloat) {
+    func setDepth(_ d: CGFloat, width: CGFloat? = nil) {
         gen += 1; let g = gen
+        if let w = width { bodyW = w }
         let size = openSize(max(d, depth))
         if d > 0 {
             panel.setFrame(openRect(max(d, depth)), display: false); view.frame = NSRect(origin: .zero, size: size)
@@ -177,12 +253,14 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
         }
     }
 
-    func refreshTint() {
-        monitor.q.async { [weak self] in
-            guard let s = self else { return }
-            let bad = Collect.posture(net: s.monitor.net, vpn: s.monitor.vpn ?? false, quick: true).filter { !$0.ok }.count
-            DispatchQueue.main.async { s.status.button?.contentTintColor = bad > 0 ? Theme.amber : nil }
-        }
+    /// One scan feeds both the board and the menu bar tint; never a second pass.
+    func refreshTint() { monitor.refreshPosture { [weak self] rows in self?.applyTint(rows) } }
+    func applyTint(_ rows: [Collect.PostureRow]) {
+        let bad = rows.filter { !$0.ok }.count
+        // The shield is always the menu bar's own colour so it is never invisible; attention is an amber dot on it.
+        status.button?.image = Self.shieldIcon(Self.systemIsDark() ? .white : .black, badge: bad > 0)
+        status.button?.contentTintColor = nil
+        status.button?.toolTip = bad > 0 ? "Ledge — \(bad) item\(bad == 1 ? "" : "s") need attention" : "Ledge — all clear"
     }
 
     // MARK: alert card
@@ -211,10 +289,8 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
     func show(_ a: Alert) {
         if a.level == .info { return }
         clearBoard()
-        if depth > 0 && bodyW != cardW { setDepth(0) }
-        bodyW = cardW
         let d: CGFloat = 78, c = tone(a.level)
-        setDepth(d)
+        setDepth(d, width: cardW)
         let size = openSize(d), x0 = (size.width - bodyW) / 2
         glyph.image = NSImage(systemSymbolName: symbol(for: a), accessibilityDescription: nil)?.withSymbolConfiguration(.init(pointSize: 22, weight: .medium))
         glyph.contentTintColor = c; glyph.layer?.shadowColor = c.cgColor
@@ -237,7 +313,12 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
             let s = CABasicAnimation(keyPath: "transform.scale"); s.fromValue = 0.6; s.toValue = 1.9; let o = CABasicAnimation(keyPath: "opacity"); o.fromValue = 0.9; o.toValue = 0
             let grp = CAAnimationGroup(); grp.animations = [s, o]; grp.duration = 1.4; grp.repeatCount = .infinity; pulse.add(grp, forKey: "pulse")
         }
-        hideTimer?.invalidate(); hideTimer = Timer.scheduledTimer(withTimeInterval: dur, repeats: false) { [weak self] _ in self?.hide() }
+        armHide(dur)
+    }
+    /// Single place that schedules the auto-close, so hover and re-show can't leave two timers racing.
+    func armHide(_ seconds: TimeInterval) {
+        hideTimer?.invalidate()
+        hideTimer = Timer.scheduledTimer(withTimeInterval: seconds, repeats: false) { [weak self] _ in self?.hide() }
     }
     func hide() {
         hideTimer?.invalidate(); ring.isHidden = true; pulse.isHidden = true
@@ -250,16 +331,30 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
     // MARK: status board (click)
     func showBoard() {
         for v in [glyph, title, detail, meta] { v.isHidden = true }
-        clearBoard(); ring.isHidden = true; pulse.isHidden = true
-        let rows = Collect.posture(net: monitor.net, vpn: monitor.vpn ?? false)
-        if depth > 0 && bodyW != boardW { setDepth(0) }
-        bodyW = boardW
-        let rowH: CGFloat = 20, perCol = (rows.count + 1) / 2, d = CGFloat(perCol) * rowH + 52
-        setDepth(d)
+        ring.isHidden = true; pulse.isHidden = true
+        // Render whatever the background scan last produced, immediately. A scan takes ~20 shell calls and must never
+        // run on the main thread: that is what made the click feel dead.
+        let rows = monitor.cachedPosture
+        if rows.isEmpty {
+            renderBoard(rows: [Collect.PostureRow(label: "Scanning…", ok: true, value: "", hint: "")], scanning: true)
+            monitor.refreshPosture { [weak self] fresh in self?.renderBoard(rows: fresh, scanning: false) }
+            return
+        }
+        renderBoard(rows: rows, scanning: false)
+        monitor.refreshPosture { [weak self] fresh in
+            guard let s = self, s.depth > 0, !s.boardViews.isEmpty else { return }
+            if fresh.map({ "\($0.label)\($0.ok)\($0.value)" }) != rows.map({ "\($0.label)\($0.ok)\($0.value)" }) { s.renderBoard(rows: fresh, scanning: false) }
+        }
+    }
+
+    func renderBoard(rows: [Collect.PostureRow], scanning: Bool) {
+        clearBoard()
+        let rowH: CGFloat = 20, perCol = max(1, (rows.count + 1) / 2), d = CGFloat(perCol) * rowH + 52
+        setDepth(d, width: boardW)
         let size = openSize(d), x0 = (size.width - bodyW) / 2
         let bad = rows.filter { !$0.ok }.count
         let head = label("SYSTEM STATUS", size: 10, weight: .semibold, color: Theme.cyan, mono: true); head.frame = NSRect(x: x0 + 20, y: d - 26, width: 200, height: 14)
-        let sum = label(bad == 0 ? "ALL CLEAR" : "\(bad) NEED\(bad == 1 ? "S" : "") ATTENTION", size: 10, weight: .semibold, color: bad == 0 ? Theme.green : Theme.amber, mono: true); sum.frame = NSRect(x: x0 + bodyW - 220, y: d - 26, width: 200, height: 14); sum.alignment = .right
+        let sum = label(scanning ? "READING SETTINGS" : (bad == 0 ? "ALL CLEAR" : "\(bad) NEED\(bad == 1 ? "S" : "") ATTENTION"), size: 10, weight: .semibold, color: scanning ? Theme.cyan : (bad == 0 ? Theme.green : Theme.amber), mono: true); sum.frame = NSRect(x: x0 + bodyW - 220, y: d - 26, width: 200, height: 14); sum.alignment = .right
         var all: [NSView] = [head, sum]
         let colW = (bodyW - 40) / 2
         for (i, r) in rows.enumerated() {
@@ -271,12 +366,13 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
             all += [led, l, v]
         }
         let foot = label(metaLine(), size: 10, weight: .medium, color: Theme.cyan.withAlphaComponent(0.7), mono: true); foot.frame = NSRect(x: x0 + 40, y: 6, width: bodyW - 60, height: 13); all.append(foot)
+        let step = min(0.008, 0.32 / Double(max(1, all.count)))      // whole cascade lands inside ~0.35 s
         for (i, v) in all.enumerated() {
             view.addSubview(v); boardViews.append(v); v.alphaValue = 0
-            let f = v.frame; v.frame = f.offsetBy(dx: -10, dy: 0)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12 + Double(i) * 0.022) { NSAnimationContext.runAnimationGroup { ctx in ctx.duration = 0.25; v.animator().alphaValue = 1; v.animator().frame = f } }
+            let f = v.frame; v.frame = f.offsetBy(dx: -8, dy: 0)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.04 + Double(i) * step) { NSAnimationContext.runAnimationGroup { ctx in ctx.duration = 0.18; v.animator().alphaValue = 1; v.animator().frame = f } }
         }
-        hideTimer?.invalidate(); hideTimer = Timer.scheduledTimer(withTimeInterval: 40, repeats: false) { [weak self] _ in self?.hide() }
+        armHide(40)
     }
     func clicked() { if depth > 0 { hide() } else { showBoard() } }
 
@@ -301,7 +397,7 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
         m.addItem(withTitle: "Quit Ledge", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         status.menu = m
     }
-    @objc func menuBoard() { if depth > 0 { hide() }; DispatchQueue.main.asyncAfter(deadline: .now() + (depth > 0 ? 0.4 : 0)) { self.showBoard() } }
+    @objc func menuBoard() { showBoard() }
     @objc func menuHome() { let on = monitor.toggleHome(); rebuildMenu(); show(Alert(level: .notice, title: on ? "Marked as Home" : "No longer Home", detail: on ? "New devices joining this network will be announced." : "Device alerts are off for this network.", key: "home", sticky: false)) }
     @objc func menuLocation() { loc.requestWhenInUseAuthorization() }
     @objc func menuTLS(_ item: NSMenuItem) { Store.shared.state.tlsCheck.toggle(); Store.shared.save(); rebuildMenu() }

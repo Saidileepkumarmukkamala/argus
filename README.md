@@ -11,6 +11,14 @@ Site and download: https://saidileepkumarmukkamala.github.io/ledge/
 Not a firewall, not antivirus, not traffic inspection. It reads your Mac's own state and the network's shape using
 public macOS tools, and it makes no network connections (one optional HTTPS check to apple.com, off by default).
 
+## Install (from a release)
+macOS blocks apps that are not notarized by Apple. Ledge is ad-hoc signed, so after dragging it to `/Applications`:
+```
+xattr -dr com.apple.quarantine /Applications/Ledge.app
+```
+or double-click it once and use System Settings → Privacy & Security → **Open Anyway**. The Control-click → Open
+shortcut was removed in macOS 15 and does not work for this.
+
 ## Build
 ```
 cd app && ./build.sh            # needs Xcode command-line tools; output Ledge.app (ad-hoc signed)
