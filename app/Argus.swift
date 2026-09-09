@@ -150,6 +150,7 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
         panel.backgroundColor = .clear; panel.isOpaque = false; panel.hasShadow = false; panel.ignoresMouseEvents = false; panel.isMovable = false
         view = ClickView(frame: NSRect(origin: .zero, size: closedRect().size)); view.wantsLayer = true
         view.layer?.backgroundColor = NSColor.black.cgColor
+        mask.frame = CGRect(origin: .zero, size: closedRect().size)
         mask.path = closedPath(in: closedRect().size); view.layer?.mask = mask
         view.onClick = { [weak self] in self?.clicked() }
         // Reading the board shouldn't be a race against a timer: hovering holds it open, leaving restarts the countdown.
@@ -239,8 +240,7 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
         clearBoard(); ring.isHidden = true; pulse.isHidden = true
         depth = 0; gen += 1
         panel.setFrame(closedRect(), display: false)
-        view.frame = NSRect(origin: .zero, size: closedRect().size)
-        mask.removeAllAnimations(); mask.path = closedPath(in: closedRect().size)
+        setViewSize(closedRect().size, path: closedPath(in: closedRect().size))
         panel.orderFrontRegardless(); setMode(idleMode)
         NSLog("screen changed: notch now %@", NSStringFromRect(notch))
     }
@@ -269,8 +269,14 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
         let animSize = openSize(max(d, oldDepth))          // the window must cover both shapes while it animates
         if d > 0 {
             panel.setFrame(openRect(max(d, oldDepth)), display: false)
-            view.frame = NSRect(origin: .zero, size: animSize)
-            if oldDepth == 0 { mask.removeAllAnimations(); mask.path = closedPath(in: animSize) }
+            if oldDepth == 0 { setViewSize(animSize, path: closedPath(in: animSize)) }
+            else {
+                CATransaction.begin(); CATransaction.setDisableActions(true)
+                view.frame = NSRect(origin: .zero, size: animSize)
+                view.layer?.frame = CGRect(origin: .zero, size: animSize)
+                mask.frame = CGRect(origin: .zero, size: animSize)
+                CATransaction.commit()
+            }
             layout(size: animSize, d: d)
         }
         let to = d > 0 ? openPath(d, in: animSize) : closedPath(in: animSize)
@@ -284,14 +290,13 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
         DispatchQueue.main.asyncAfter(deadline: .now() + anim.settlingDuration) { [weak self] in
             guard let s = self, s.gen == g, s.depth == d else { return }
             if d == 0 {
+                let cs = s.closedRect().size
                 s.panel.setFrame(s.closedRect(), display: false)
-                s.view.frame = NSRect(origin: .zero, size: s.closedRect().size)
-                s.mask.removeAllAnimations(); s.mask.path = s.closedPath(in: s.closedRect().size)
+                s.setViewSize(cs, path: s.closedPath(in: cs))
             } else {
                 let exact = s.openSize(d)
                 s.panel.setFrame(s.openRect(d), display: false)
-                s.view.frame = NSRect(origin: .zero, size: exact)
-                s.mask.removeAllAnimations(); s.mask.path = s.openPath(d, in: exact)
+                s.setViewSize(exact, path: s.openPath(d, in: exact))
                 s.layout(size: exact, d: d)
                 if s.mode == .stats { s.drawStats() }
             }
@@ -353,25 +358,28 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
         setMode(.card)
         let d: CGFloat = 78, c = tone(a.level)
         setDepth(d, width: cardW)
-        let size = openSize(d), x0 = (size.width - bodyW) / 2
+        let size = view.bounds.size, x0 = (size.width - bodyW) / 2
+        // Anchor to the bottom of the body, not the bottom of the window. While the panel is still shrinking from a
+        // taller state the two differ, and the content would sit far down the screen until the resize settled.
+        let yb = size.height - notch.height - d
         glyph.image = NSImage(systemSymbolName: symbol(for: a), accessibilityDescription: nil)?.withSymbolConfiguration(.init(pointSize: 22, weight: .medium))
         glyph.contentTintColor = c; glyph.layer?.shadowColor = c.cgColor
-        glyph.frame = NSRect(x: x0 + 20, y: d - 52, width: 30, height: 30)
-        title.stringValue = a.title; title.frame = NSRect(x: x0 + 62, y: d - 30, width: bodyW - 120, height: 18)
-        detail.stringValue = a.detail; detail.frame = NSRect(x: x0 + 62, y: d - 62, width: bodyW - 120, height: 30)
-        meta.stringValue = metaLine() + (queue.isEmpty ? "" : "  ·  +\(queue.count) more"); meta.textColor = c.withAlphaComponent(0.85); meta.frame = NSRect(x: x0 + 62, y: 6, width: bodyW - 80, height: 13)
+        glyph.frame = NSRect(x: x0 + 20, y: yb + d - 52, width: 30, height: 30)
+        title.stringValue = a.title; title.frame = NSRect(x: x0 + 62, y: yb + d - 30, width: bodyW - 120, height: 18)
+        detail.stringValue = a.detail; detail.frame = NSRect(x: x0 + 62, y: yb + d - 62, width: bodyW - 120, height: 30)
+        meta.stringValue = metaLine() + (queue.isEmpty ? "" : "  ·  +\(queue.count) more"); meta.textColor = c.withAlphaComponent(0.85); meta.frame = NSRect(x: x0 + 62, y: yb + 6, width: bodyW - 80, height: 13)
         for v in [glyph, title, detail, meta] { v.isHidden = false; v.alphaValue = 0 }
         NSAnimationContext.runAnimationGroup { ctx in ctx.duration = 0.35; for v in [glyph, title, detail, meta] { v.animator().alphaValue = 1 } }
         // countdown arc + warning pulse
         let dur: Double = a.sticky ? 12 : 3
-        let center = CGPoint(x: x0 + bodyW - 26, y: d - 37)
+        let center = CGPoint(x: x0 + bodyW - 26, y: yb + d - 37)
         ring.path = CGPath(ellipseIn: CGRect(x: center.x - 9, y: center.y - 9, width: 18, height: 18), transform: nil)
         ring.strokeColor = c.withAlphaComponent(0.9).cgColor; ring.isHidden = false; ring.removeAllAnimations(); ring.strokeEnd = 0
         let drain = CABasicAnimation(keyPath: "strokeEnd"); drain.fromValue = 1; drain.toValue = 0; drain.duration = dur; drain.fillMode = .forwards; drain.isRemovedOnCompletion = false
         ring.add(drain, forKey: "drain")
         pulse.removeAllAnimations(); pulse.isHidden = a.level != .warning
         if a.level == .warning {
-            pulse.path = CGPath(ellipseIn: CGRect(x: -16, y: -16, width: 32, height: 32), transform: nil); pulse.position = CGPoint(x: x0 + 35, y: d - 37); pulse.strokeColor = c.cgColor
+            pulse.path = CGPath(ellipseIn: CGRect(x: -16, y: -16, width: 32, height: 32), transform: nil); pulse.position = CGPoint(x: x0 + 35, y: yb + d - 37); pulse.strokeColor = c.cgColor
             let s = CABasicAnimation(keyPath: "transform.scale"); s.fromValue = 0.6; s.toValue = 1.9; let o = CABasicAnimation(keyPath: "opacity"); o.fromValue = 0.9; o.toValue = 0
             let grp = CAAnimationGroup(); grp.animations = [s, o]; grp.duration = 1.4; grp.repeatCount = .infinity; pulse.add(grp, forKey: "pulse")
         }
@@ -425,21 +433,22 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
         setMode(.board); clearBoard()
         let rowH: CGFloat = 20, perCol = max(1, (rows.count + 1) / 2), d = CGFloat(perCol) * rowH + 52
         setDepth(d, width: boardW)
-        let size = openSize(d), x0 = (size.width - bodyW) / 2
+        let size = view.bounds.size, x0 = (size.width - bodyW) / 2
+        let yb = size.height - notch.height - d
         let bad = rows.filter { !$0.ok }.count
-        let head = label("SYSTEM STATUS", size: 10, weight: .semibold, color: Theme.cyan, mono: true); head.frame = NSRect(x: x0 + 20, y: d - 26, width: 200, height: 14)
-        let sum = label(scanning ? "READING SETTINGS" : (bad == 0 ? "ALL CLEAR" : "\(bad) NEED\(bad == 1 ? "S" : "") ATTENTION"), size: 10, weight: .semibold, color: scanning ? Theme.cyan : (bad == 0 ? Theme.green : Theme.amber), mono: true); sum.frame = NSRect(x: x0 + bodyW - 220, y: d - 26, width: 200, height: 14); sum.alignment = .right
+        let head = label("SYSTEM STATUS", size: 10, weight: .semibold, color: Theme.cyan, mono: true); head.frame = NSRect(x: x0 + 20, y: yb + d - 26, width: 200, height: 14)
+        let sum = label(scanning ? "READING SETTINGS" : (bad == 0 ? "ALL CLEAR" : "\(bad) NEED\(bad == 1 ? "S" : "") ATTENTION"), size: 10, weight: .semibold, color: scanning ? Theme.cyan : (bad == 0 ? Theme.green : Theme.amber), mono: true); sum.frame = NSRect(x: x0 + bodyW - 220, y: yb + d - 26, width: 200, height: 14); sum.alignment = .right
         var all: [NSView] = [head, sum]
         let colW = (bodyW - 40) / 2
         for (i, r) in rows.enumerated() {
-            let col = CGFloat(i / perCol), cx = x0 + 20 + col * colW, y = d - 40 - CGFloat(i % perCol) * rowH
+            let col = CGFloat(i / perCol), cx = x0 + 20 + col * colW, y = yb + d - 40 - CGFloat(i % perCol) * rowH
             let led = NSView(frame: NSRect(x: cx + 2, y: y - 12, width: 7, height: 7)); led.wantsLayer = true; led.layer?.cornerRadius = 3.5
             let c = r.ok ? Theme.green : Theme.amber; led.layer?.backgroundColor = c.cgColor; led.layer?.shadowColor = c.cgColor; led.layer?.shadowRadius = 5; led.layer?.shadowOpacity = 0.9; led.layer?.shadowOffset = .zero
             let l = label(r.label, size: 11.5, weight: .medium, color: Theme.text); l.frame = NSRect(x: cx + 18, y: y - 16, width: 128, height: 16)
             let v = label(r.value, size: 10, weight: .medium, color: r.ok ? Theme.dim : Theme.text, mono: true); v.frame = NSRect(x: cx + 146, y: y - 15, width: colW - 156, height: 14); v.alignment = .right; v.toolTip = r.hint
             all += [led, l, v]
         }
-        let foot = label(metaLine(), size: 10, weight: .medium, color: Theme.cyan.withAlphaComponent(0.7), mono: true); foot.frame = NSRect(x: x0 + 40, y: 6, width: bodyW - 60, height: 13); all.append(foot)
+        let foot = label(metaLine(), size: 10, weight: .medium, color: Theme.cyan.withAlphaComponent(0.7), mono: true); foot.frame = NSRect(x: x0 + 40, y: yb + 6, width: bodyW - 60, height: 13); all.append(foot)
         let step = min(0.008, 0.32 / Double(max(1, all.count)))      // whole cascade lands inside ~0.35 s
         for (i, v) in all.enumerated() {
             view.addSubview(v); boardViews.append(v); v.alphaValue = 0
@@ -456,6 +465,19 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
         let mid = v.bounds.width / 2
         v.notchSpan = (mid - notch.width / 2, mid + notch.width / 2)
         v.menuBarHeight = notch.height
+    }
+
+    /// Resize the content view and its mask together, with implicit animation off.
+    /// The mask's frame was never being set, so after the window shrank the mask kept its old geometry and the black
+    /// shape appeared to slide down the screen. Core Animation was also implicitly animating these direct changes.
+    func setViewSize(_ size: CGSize, path: CGPath) {
+        CATransaction.begin(); CATransaction.setDisableActions(true)
+        view.frame = NSRect(origin: .zero, size: size)
+        view.layer?.frame = CGRect(origin: .zero, size: size)
+        mask.frame = CGRect(origin: .zero, size: size)
+        mask.removeAllAnimations()
+        mask.path = path
+        CATransaction.commit()
     }
 
     // MARK: panel state
@@ -546,8 +568,13 @@ final class App: NSObject, NSApplicationDelegate, CLLocationManagerDelegate, NSM
             statsW = max(260, min(560, stepped))
             if mode == .stats { setDepth(statsDepth, width: statsWidth) }
         }
-        let size = openSize(statsDepth)
-        line.frame = NSRect(x: (size.width - statsW) / 2, y: statsDepth / 2 - 8, width: statsW, height: 16)
+        // Position from the view's ACTUAL bounds, not the target size. While the panel is still shrinking from a card
+        // or the board, the two differ, and using the target put this line near the bottom of a tall window: the text
+        // appeared to fall down the screen until the resize settled.
+        let b = view.bounds
+        line.frame = NSRect(x: (b.width - statsW) / 2,
+                            y: b.height - notch.height - statsDepth / 2 - 8,
+                            width: statsW, height: 16)
         line.isHidden = false
     }
 
