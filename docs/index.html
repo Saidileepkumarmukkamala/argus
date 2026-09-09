@@ -118,7 +118,14 @@
   .post:hover{text-decoration:none;color:var(--accent)}
   .post span{color:var(--muted);font-size:14px;margin-left:auto;white-space:nowrap}
 
-  footer{padding:44px 0 44px;color:var(--muted);font-size:14px;border-top:1px solid var(--line);margin-top:72px}
+  footer{padding:52px 0 150px;color:var(--muted);font-size:14px;border-top:1px solid var(--line);margin-top:72px;
+    position:relative;overflow:hidden}
+  /* the oversized wordmark bleeding off the bottom edge */
+  .fmark{position:absolute;left:50%;bottom:-58px;transform:translateX(-50%);font-family:Grotesk,system-ui,sans-serif;
+    font-size:clamp(96px,20vw,260px);font-weight:700;letter-spacing:-.05em;line-height:.8;white-space:nowrap;
+    background:linear-gradient(180deg,rgba(122,208,224,.16),rgba(122,208,224,.02) 82%);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;pointer-events:none;user-select:none}
+  footer .wrap{position:relative;z-index:1}
   .fin{display:grid;grid-template-columns:1.7fr repeat(4,1fr);gap:32px;margin-bottom:36px}
   @media(max-width:1000px){.fin{grid-template-columns:1fr 1fr 1fr;gap:28px}}
   @media(max-width:640px){.fin{grid-template-columns:1fr 1fr}}
@@ -272,6 +279,7 @@ cd argus/app &amp;&amp; ./build.sh &amp;&amp; open Argus.app</pre>
 </div>
 
 <footer>
+  <div class="fmark" aria-hidden="true">ARGUS</div>
   <div class="wrap">
     <div class="fin">
       <div class="fbrand">
