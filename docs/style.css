@@ -1,13 +1,14 @@
 /* Blog pages. Same system as the home page: left-aligned, flat, no gradients or blur fields,
    small type scale. Class names are unchanged so the posts need no edits. */
 @font-face{font-family:Grotesk;src:url(fonts/SpaceGrotesk.ttf) format('truetype-variations');font-weight:300 700;font-display:swap}
+@font-face{font-family:Jakarta;src:url(fonts/PlusJakarta.ttf) format('truetype-variations');font-weight:200 800;font-display:swap}
 :root{--bg:#0b0b0e;--panel:#141418;--line:#232329;--line2:#31313a;--text:#f2f2f5;--muted:#9a9aa6;--dim:#6d6d78;
- --accent:#7ad0e0;--amber:#e8a765;--green:#7ad6a4;
+ --accent:#5cdbff;--amber:#ff9e42;--green:#61eb9e;
  --mono:ui-monospace,SFMono-Regular,Menlo,monospace}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--text);
- font:16px/1.7 -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+ font:16px/1.7 Jakarta,-apple-system,BlinkMacSystemFont,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 h1,h2,h3,.gk{font-family:Grotesk,-apple-system,BlinkMacSystemFont,system-ui,sans-serif;letter-spacing:-.03em}
 

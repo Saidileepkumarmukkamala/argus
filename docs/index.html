@@ -16,222 +16,290 @@
 <meta name="theme-color" content="#0b0b0e">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Argus","applicationCategory":"SecurityApplication","operatingSystem":"macOS 14.0 or later","description":"A free, open-source macOS app that tells you in plain English when your network or your Mac's exposure changes.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"downloadUrl":"https://github.com/Saidileepkumarmukkamala/argus/releases/latest/download/Argus.zip","softwareVersion":"1.5.0","license":"https://github.com/Saidileepkumarmukkamala/argus","url":"https://saidileepkumarmukkamala.github.io/argus","image":"https://saidileepkumarmukkamala.github.io/argus/assets/icon.png","author":{"@type":"Person","name":"Sai Mukkamala"}}</script>
 <style>
-  @font-face{font-family:Grotesk;src:url(fonts/SpaceGrotesk.ttf) format('truetype-variations');font-weight:300 700;font-display:swap}
-  :root{ --bg:#0b0b0e; --panel:#141418; --line:#232329; --line2:#31313a; --text:#f2f2f5; --muted:#9a9aa6; --dim:#6d6d78;
-         --accent:#7ad0e0; --amber:#e8a765; --green:#7ad6a4;
-         --mono:ui-monospace,SFMono-Regular,Menlo,monospace }
-  *{box-sizing:border-box}
-  html{scroll-behavior:smooth}
-  html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 -apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
-  a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
-  h1,h2,h3{font-family:Grotesk,-apple-system,BlinkMacSystemFont,system-ui,sans-serif}
-  .wrap{max-width:1040px;margin:0 auto;padding:0 24px}
-  .mono{font-family:var(--mono)}
+@font-face{font-family:Grotesk;src:url(fonts/SpaceGrotesk.ttf) format('truetype-variations');font-weight:300 700;font-display:swap}
+@font-face{font-family:Jakarta;src:url(fonts/PlusJakarta.ttf) format('truetype-variations');font-weight:200 800;font-display:swap}
+:root{
+  --bg:#0b0b0e;--panel:#141418;--line:#232329;--line2:#31313a;--text:#f2f2f5;--muted:#9a9aa6;--dim:#6d6d78;
+  --cyan:#5cdbff;--amber:#ff9e42;--green:#61eb9e;            /* the app's own Theme colours, used only for meaning */
+  --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sp:cubic-bezier(.32,.72,0,1);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 Jakarta,-apple-system,BlinkMacSystemFont,system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:var(--cyan);text-decoration:none}a:hover{text-decoration:underline}
+h1,h2,h3{font-family:Grotesk,system-ui,sans-serif;letter-spacing:-.03em;font-weight:600;margin:0}
+.wrap{max-width:1120px;margin:0 auto;padding:0 32px}
+@media(max-width:640px){.wrap{padding:0 20px}}
+.mono{font-family:var(--mono)}
 
-  header{padding:28px 0 8px;display:flex;align-items:center;gap:12px}
-  header .name{font-family:Grotesk,system-ui,sans-serif;font-weight:600;letter-spacing:-.02em;font-size:18px}
-  header .name s{text-decoration:none;color:var(--accent)}
-  header .tag{color:var(--muted);font-size:14px;margin-left:auto}
-  @media(max-width:560px){header .tag{display:none}}
+/* ---------- a screen band: the top of a MacBook display, full width, true proportion ---------- */
+.band{position:relative;width:100%;background:#0f1017;overflow:hidden;border-bottom:1px solid var(--line)}
+.band.hero{background:radial-gradient(120% 90% at 50% 100%,#171a26 0%,#0f1017 55%,#0c0d13 100%)}
+.band.scene{background:linear-gradient(180deg,#12131b,#0e0f15)}
+.mbar{position:relative;z-index:2;height:36px;display:flex;align-items:center;padding:0 18px;
+  background:rgba(7,8,12,.62);border-bottom:1px solid rgba(255,255,255,.05)}
+.mbar .l,.mbar .r{display:flex;align-items:center;gap:22px;font-size:13.5px}
+.mbar .r{margin-left:auto}
+.mbar a{color:var(--muted)}.mbar a:hover{color:var(--text);text-decoration:none}
+.mbar .mark{font-family:Grotesk,system-ui,sans-serif;font-weight:600;font-size:15px;color:var(--text);letter-spacing:-.02em}
+.mbar .mark s{text-decoration:none;color:var(--cyan)}
+.mbar .dl{color:var(--text);border:1px solid var(--line2);padding:4px 11px;border-radius:7px;font-size:12.5px}
+.mbar i{display:block;height:5px;border-radius:3px;background:rgba(225,230,242,.42)}
+@media(max-width:820px){.mbar .r a:not(.dl){display:none}}
+.stage{position:relative}
+.notch{position:absolute;top:0;left:50%;transform:translateX(-50%);z-index:3;pointer-events:none}
+.notch svg{display:block}
+.ncontent{position:absolute;left:50%;transform:translateX(-50%);overflow:hidden;color:#fff;
+  background:repeating-linear-gradient(180deg,rgba(255,255,255,.022) 0 1px,transparent 1px 3px)}
+.nhair{position:absolute;top:0;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:.85}
+.ncard{display:flex;align-items:flex-start}
+.ncard .ic{border-radius:50%;flex:none;position:relative;display:grid;place-items:center}
+.ncard .ic b{position:absolute;border-radius:50%;border:1px solid currentColor;opacity:.45}
+.ncard .ic u{border-radius:50%;background:currentColor;text-decoration:none;display:block}
+.ncard h4{font-family:Jakarta,system-ui,sans-serif;font-weight:500;letter-spacing:-.005em;color:#f5f5f5;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ncard p{color:#98a1b4;margin:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.nmeta{font-family:var(--mono);letter-spacing:.06em;opacity:.95}
+.nring{flex:none;transform:rotate(-90deg)}
+.nrows{display:grid;grid-template-columns:1fr 1fr}
+.nrow{display:flex;align-items:center;color:#eceff5;min-width:0}
+.nrow s{border-radius:50%;flex:none;text-decoration:none}
+.nrow em{font-style:normal;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nrow u{margin-left:auto;text-decoration:none;color:#8891a3;font-family:var(--mono);padding-left:6px;white-space:nowrap}
+.nhead{display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);letter-spacing:.12em}
+.nstats{display:flex;align-items:center;justify-content:center;font-family:var(--mono);white-space:nowrap;height:100%}
+.nstats i{font-style:normal;color:rgba(255,255,255,.4);font-weight:600}
+.nstats b{font-weight:500}
+.nstats s{text-decoration:none;color:rgba(255,255,255,.22)}
 
-  .hero{padding:36px 0 12px}
-  .hero h1{font-size:clamp(34px,6vw,60px);line-height:1.04;letter-spacing:-.03em;margin:0 0 16px;font-weight:700}
-  .hero p.lead{font-size:clamp(17px,2.2vw,21px);color:var(--muted);max-width:660px;margin:0 0 28px}
-  .cta{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-  .btn{display:inline-flex;align-items:center;gap:10px;background:var(--text);color:#0b0b0e;padding:14px 22px;border-radius:12px;font-weight:600;font-size:17px}
-  .btn:hover{text-decoration:none;background:#fff}
-  .btn svg{width:18px;height:18px}
-  .btn2{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line2);padding:13px 18px;border-radius:12px;color:var(--text);font-size:15.5px}
-  .btn2:hover{text-decoration:none;border-color:var(--dim)}
-  .meta{color:var(--muted);font-size:14px}
+/* ---------- hero: the headline sits on the desktop, under the notch ---------- */
+.herobody{position:relative;z-index:1;padding-top:clamp(150px,19vw,230px);padding-bottom:68px}
+.herobody h1{font-size:clamp(38px,6.2vw,76px);line-height:.98;letter-spacing:-.04em;font-weight:600}
+.herobody .lede{font-size:clamp(17px,1.6vw,20px);color:var(--muted);max-width:600px;margin:26px 0 34px;line-height:1.55}
+.cta{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:10px;background:var(--text);color:#0b0b0e;padding:13px 20px;border-radius:11px;font-weight:600;font-size:16px;transition:transform .5s var(--sp)}
+.btn:hover{text-decoration:none;background:#fff;transform:translateY(-1px)}
+.btn svg{width:17px;height:17px}
+.btn2{display:inline-flex;align-items:center;gap:9px;border:1px solid rgba(255,255,255,.18);padding:12px 17px;border-radius:11px;color:var(--text);font-size:15px}
+.btn2:hover{text-decoration:none;border-color:rgba(255,255,255,.4)}
+.btn2 svg{width:15px;height:15px;color:#ffdd00}
+.vline{margin-top:18px;font-size:13.5px;color:var(--dim);font-family:var(--mono);letter-spacing:.02em}
 
-  /* the screen: the top of a MacBook display, drawn at true proportion */
-  .screen{margin:44px 0 0;border-radius:16px 16px 8px 8px;overflow:hidden;border:1px solid var(--line);
-    background:linear-gradient(180deg,#191b26,#12131b);box-shadow:0 30px 80px rgba(0,0,0,.5);position:relative}
-  .mbar{height:26px;display:flex;align-items:center;gap:9px;padding:0 12px;background:rgba(8,9,14,.5)}
-  .mbar i{display:block;height:6px;border-radius:3px;background:rgba(225,230,242,.5)}
-  .mbar .r{margin-left:auto;display:flex;gap:8px;align-items:center}
-  .stage{position:relative;height:200px}
-  .notch{position:absolute;top:0;left:50%;transform:translateX(-50%);pointer-events:none}
-  .notch svg{display:block}
-  .ncontent{position:absolute;left:50%;transform:translateX(-50%);top:22px;overflow:hidden;color:#fff}
-  /* At true MacBook proportion the card's own text is small, so the sentence is repeated at reading
-     size below the panel. Everything else here mirrors the real card: cyan hairline, ring icon,
-     monospace footer, countdown ring. */
-  .ncontent{background:repeating-linear-gradient(180deg,rgba(255,255,255,.022) 0 1px,transparent 1px 3px)}
-  .nhair{position:absolute;top:0;height:1px;background:linear-gradient(90deg,transparent,var(--nhc,#5cdbff),transparent);opacity:.85}
-  .ncard{display:flex;align-items:flex-start}
-  .ncard .ic{border-radius:50%;flex:none;position:relative;display:grid;place-items:center}
-  .ncard .ic b{position:absolute;border-radius:50%;border:1px solid currentColor;opacity:.45}
-  .ncard .ic u{border-radius:50%;background:currentColor;text-decoration:none;display:block}
-  .ncard h4{font-weight:500;letter-spacing:-.005em;color:#f5f5f5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .ncard p{color:#98a1b4;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-  .nmeta{font-family:var(--mono);letter-spacing:.06em;opacity:.95}
-  .nring{flex:none;transform:rotate(-90deg)}
-  .nrows{display:grid;grid-template-columns:1fr 1fr}
-  .nrow{display:flex;align-items:center;color:#eceff5;min-width:0}
-  .nrow s{border-radius:50%;flex:none;text-decoration:none}
-  .nrow em{font-style:normal;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .nrow u{margin-left:auto;text-decoration:none;color:#8891a3;font-family:var(--mono);padding-left:6px;white-space:nowrap}
-  .nhead{display:flex;justify-content:space-between;align-items:center;font-family:var(--mono);letter-spacing:.12em}
-  .nstats{display:flex;align-items:center;justify-content:center;font-family:var(--mono);white-space:nowrap;height:100%}
-  .nstats i{font-style:normal;color:rgba(255,255,255,.4);font-weight:600}
-  .nstats b{font-weight:500}
-  .nstats s{text-decoration:none;color:rgba(255,255,255,.22)}
-  .readout{display:flex;gap:12px;align-items:flex-start;margin:14px 0 0;min-height:52px}
-  .readout .dot{flex:0 0 8px;height:8px;border-radius:50%;margin-top:6px}
-  .readout b{display:block;font-size:15.5px;font-weight:600;letter-spacing:-.01em;margin-bottom:3px}
-  .readout span{color:var(--muted);font-size:14.5px}
-  .caption{color:var(--dim);font-size:13.5px;margin:10px 0 0}
+/* readout: the current card, at reading size, plus the honesty line */
+.readout{display:grid;grid-template-columns:1.3fr 1fr;gap:28px;align-items:start;padding:22px 0 0}
+@media(max-width:760px){.readout{grid-template-columns:1fr}}
+.readout .cur{display:flex;gap:12px;align-items:flex-start;min-height:56px}
+.readout .dot{flex:0 0 8px;height:8px;border-radius:50%;margin-top:8px}
+.readout b{display:block;font-size:16px;font-weight:600;letter-spacing:-.01em;margin-bottom:3px}
+.readout span{color:var(--muted);font-size:15px}
+.readout .honest{color:var(--dim);font-size:13.5px;line-height:1.55;padding-top:3px}
+.readout .honest em{font-style:normal;color:var(--muted)}
 
-  section{padding:64px 0 8px}
-  h2{font-size:26px;letter-spacing:-.02em;margin:0 0 10px;font-weight:600}
-  .sub{color:var(--muted);margin:0 0 28px;max-width:640px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
-  .c{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
-  .c .t{display:flex;align-items:center;gap:9px;font-weight:600;font-size:15.5px;margin-bottom:7px}
-  .c .t s{width:7px;height:7px;border-radius:50%;text-decoration:none;flex:0 0 7px}
-  .c p{margin:0;color:var(--muted);font-size:14.5px;line-height:1.5}
-  .checks{display:grid;grid-template-columns:repeat(auto-fill,minmax(295px,1fr));gap:8px}
-  .chk{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 13px;display:flex;align-items:center;gap:9px;font-size:13.5px}
-  .chk s{width:6px;height:6px;border-radius:50%;flex:0 0 6px;text-decoration:none}
-  .chk em{font-style:normal;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .chk u{margin-left:auto;text-decoration:none;font-family:var(--mono);font-size:12px;color:var(--dim);
-    white-space:nowrap;padding-left:8px;overflow:hidden;text-overflow:ellipsis;max-width:52%}
+/* ---------- sections ---------- */
+section{padding:112px 0 0}
+.shead{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px 60px;align-items:end;margin-bottom:40px}
+@media(max-width:860px){.shead{grid-template-columns:1fr}}
+h2{font-size:clamp(28px,3.6vw,44px);line-height:1.05}
+.shead p{color:var(--muted);font-size:17px;margin:0;max-width:520px}
+.hair{height:1px;background:linear-gradient(90deg,var(--cyan) 0,rgba(92,219,255,.25) 40%,transparent 100%);opacity:.7;margin:0 0 34px}
 
-  .tw{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
-  table{width:100%;border-collapse:collapse;font-size:14.5px}
-  th,td{text-align:left;padding:13px 15px;border-bottom:1px solid var(--line);vertical-align:top;white-space:nowrap}
-  tr:last-child td{border-bottom:none}
-  th{color:var(--dim);font-weight:500;font-size:13px}
-  td.y{color:var(--green)}td.n{color:var(--dim)}
-  td:first-child{white-space:normal;color:var(--muted)}
+/* moments: a full-width scene, then a caption */
+.moment{margin-top:54px}
+.band.scene{width:100vw;margin-left:calc(50% - 50vw);border-top:1px solid var(--line)}
+.moment .cap{display:grid;grid-template-columns:64px 1fr 1fr;gap:18px 40px;padding:24px 0 30px;border-bottom:1px solid var(--line)}
+@media(max-width:760px){.moment .cap{grid-template-columns:44px 1fr}.moment .cap .do{grid-column:2}}
+.moment .n{font-family:var(--mono);font-size:12px;color:var(--dim);letter-spacing:.14em;padding-top:5px}
+.moment h3{font-size:19px;letter-spacing:-.02em;margin:0 0 6px;font-weight:600}
+.moment .when{color:var(--muted);font-size:15px;margin:0}
+.moment .do{color:var(--muted);font-size:15px;margin:0}
+.moment .do b{display:block;color:var(--text);font-weight:600;font-size:13px;letter-spacing:.02em;margin-bottom:4px}
+.moment .lvl{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:8px;vertical-align:1px}
 
-  ol.steps{padding-left:0;list-style:none;counter-reset:s;display:grid;gap:14px;max-width:760px}
-  ol.steps li{counter-increment:s;display:flex;gap:16px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
-  ol.steps li::before{content:counter(s);flex:0 0 28px;height:28px;border-radius:50%;background:var(--text);color:#0b0b0e;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:14px}
-  code{background:#1c1c22;border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:14px;font-family:var(--mono)}
-  pre{background:#111116;border:1px solid var(--line);border-radius:14px;padding:16px 18px;overflow-x:auto;font-size:13px;color:#cfd7e6;font-family:var(--mono);line-height:1.7;margin:0}
+.more{margin-top:64px}
+.more h3{font-size:19px;margin:0 0 20px}
+.morelist{columns:2;column-gap:48px;padding:0;margin:0;list-style:none;max-width:980px}
+@media(max-width:640px){.morelist{columns:1}}
+.morelist li{break-inside:avoid;display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);font-size:15px}
+.morelist li s{flex:none;width:7px;height:7px;border-radius:50%;margin-top:9px;text-decoration:none}
+.morelist li span{color:var(--muted)}
+.morelist li b{font-weight:600;color:var(--text);display:block;margin-bottom:1px}
 
-  .facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
-  .fact{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
-  .fact b{display:block;margin-bottom:6px;font-size:15.5px}
-  .fact span{color:var(--muted);font-size:14.5px}
+/* board and stats bands */
+.bandwrap{margin-top:6px}
+.threecol{display:grid;grid-template-columns:repeat(3,1fr);gap:40px;margin-top:36px}
+@media(max-width:820px){.threecol{grid-template-columns:1fr}}
+.threecol h3{font-size:16px;margin:0 0 8px}
+.threecol p{color:var(--muted);font-size:15px;margin:0}
+.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-top:36px;border-top:1px solid var(--line)}
+@media(max-width:820px){.facts{grid-template-columns:1fr 1fr}}
+.facts div{padding:20px 22px 22px 0;border-bottom:1px solid var(--line)}
+.facts b{display:block;font-family:Grotesk,system-ui,sans-serif;font-size:24px;letter-spacing:-.03em;font-weight:600;margin-bottom:4px}
+.facts span{color:var(--muted);font-size:14.5px}
 
-  .support{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px;
-    display:flex;align-items:center;justify-content:space-between;gap:22px;flex-wrap:wrap;max-width:760px}
-  .support div b{display:block;font-size:15.5px;margin-bottom:4px}
-  .support div span{color:var(--muted);font-size:14.5px}
-  .coffee{flex:none;display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line2);
-    padding:13px 18px;border-radius:12px;color:var(--text);font-weight:400;font-size:15.5px}
-  .coffee:hover{text-decoration:none;border-color:#ffdd00}
-  .coffee svg{width:16px;height:16px;color:#ffdd00}
-  @media(max-width:560px){.support .coffee{width:100%;justify-content:center}}
+/* limits: numbered, plain */
+.limits{list-style:none;padding:0;margin:0;counter-reset:l;max-width:900px}
+.limits li{counter-increment:l;display:grid;grid-template-columns:56px 1fr;gap:18px;padding:22px 0;border-bottom:1px solid var(--line)}
+.limits li::before{content:counter(l,decimal-leading-zero);font-family:var(--mono);color:var(--dim);font-size:13px;padding-top:6px;letter-spacing:.1em}
+.limits h3{font-size:19px;margin:0 0 6px;letter-spacing:-.02em}
+.limits p{margin:0;color:var(--muted);font-size:15.5px}
 
-  .posts{display:grid;gap:2px;max-width:760px}
-  .post{display:flex;gap:14px;align-items:baseline;padding:14px 2px;border-bottom:1px solid var(--line);color:var(--text)}
-  .post:hover{text-decoration:none;color:var(--accent)}
-  .post span{color:var(--muted);font-size:14px;margin-left:auto;white-space:nowrap}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+table{width:100%;border-collapse:collapse;font-size:14.5px}
+th,td{text-align:left;padding:13px 16px;border-bottom:1px solid var(--line);vertical-align:top;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+th{color:var(--dim);font-weight:500;font-size:12.5px;font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase}
+td.y{color:var(--green)}td.n{color:var(--dim)}
+td:first-child{white-space:normal;color:var(--muted)}
 
-  footer{padding:52px 0 150px;color:var(--muted);font-size:14px;border-top:1px solid var(--line);margin-top:72px;
-    position:relative;overflow:hidden}
-  /* the oversized wordmark bleeding off the bottom edge */
-  .fmark{position:absolute;left:50%;bottom:-58px;transform:translateX(-50%);font-family:Grotesk,system-ui,sans-serif;
-    font-size:clamp(96px,20vw,260px);font-weight:700;letter-spacing:-.05em;line-height:.8;white-space:nowrap;
-    background:linear-gradient(180deg,rgba(122,208,224,.16),rgba(122,208,224,.02) 82%);
-    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;pointer-events:none;user-select:none}
-  footer .wrap{position:relative;z-index:1}
-  .fin{display:grid;grid-template-columns:1.7fr repeat(4,1fr);gap:32px;margin-bottom:36px}
-  @media(max-width:1000px){.fin{grid-template-columns:1fr 1fr 1fr;gap:28px}}
-  @media(max-width:640px){.fin{grid-template-columns:1fr 1fr}}
-  .fbrand b{font-family:Grotesk,system-ui,sans-serif;font-size:17px;color:var(--text);display:block;margin-bottom:10px;letter-spacing:-.02em}
-  .fbrand b s{text-decoration:none;color:var(--accent)}
-  .fbrand p{margin:0 0 14px;max-width:280px}
-  .fcol h5{margin:0 0 12px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);font-family:var(--mono);font-weight:500}
-  .fcol a{display:block;color:var(--muted);font-size:14.5px;margin-bottom:9px}
-  .fcol a:hover{color:var(--text);text-decoration:none}
-  .fbot{display:flex;gap:16px;flex-wrap:wrap;padding-top:26px;border-top:1px solid var(--line);color:var(--dim);font-size:13.5px}
-  .fbot .sp{margin-left:auto;display:flex;gap:18px;flex-wrap:wrap}
-  .stat{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:13px}
-  .stat s{width:6px;height:6px;border-radius:50%;background:var(--green);text-decoration:none}
-  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+ol.steps{padding-left:0;list-style:none;counter-reset:s;display:grid;gap:12px;max-width:820px}
+ol.steps li{counter-increment:s;display:flex;gap:16px;align-items:flex-start;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:17px 20px}
+ol.steps li::before{content:counter(s);flex:0 0 28px;height:28px;border-radius:50%;background:var(--text);color:#0b0b0e;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:14px}
+code{background:#1c1c22;border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:14px;font-family:var(--mono)}
+pre{background:#111116;border:1px solid var(--line);border-radius:14px;padding:18px 20px;overflow-x:auto;font-size:13px;color:#cfd7e6;font-family:var(--mono);line-height:1.7;margin:0;max-width:820px}
+.tools{color:var(--dim);font-size:13px;font-family:var(--mono);margin:18px 0 0;max-width:820px;line-height:1.8}
+
+.posts{max-width:820px}
+.post{display:flex;gap:14px;align-items:baseline;padding:16px 2px;border-bottom:1px solid var(--line);color:var(--text);font-size:17px}
+.post:hover{text-decoration:none;color:var(--cyan)}
+.post span{color:var(--dim);font-size:13px;margin-left:auto;white-space:nowrap;font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase}
+
+.support{display:grid;grid-template-columns:1fr auto;gap:28px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:26px 28px;max-width:820px}
+@media(max-width:640px){.support{grid-template-columns:1fr}}
+.support b{display:block;font-size:17px;margin-bottom:4px}
+.support span{color:var(--muted);font-size:15px}
+
+footer{margin-top:130px;border-top:1px solid var(--line);position:relative;overflow:hidden;color:var(--muted);font-size:14px;padding:56px 0 150px}
+.fmark{position:absolute;left:50%;bottom:-58px;transform:translateX(-50%);font-family:Grotesk,system-ui,sans-serif;font-weight:700;
+  font-size:clamp(96px,20vw,260px);letter-spacing:-.05em;line-height:.8;white-space:nowrap;
+  background:linear-gradient(180deg,rgba(92,219,255,.15),rgba(92,219,255,.02) 82%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;pointer-events:none;user-select:none}
+footer .wrap{position:relative;z-index:1}
+.fin{display:grid;grid-template-columns:1.7fr repeat(4,1fr);gap:32px;margin-bottom:36px}
+@media(max-width:1000px){.fin{grid-template-columns:1fr 1fr 1fr;gap:28px}}
+@media(max-width:640px){.fin{grid-template-columns:1fr 1fr}}
+.fbrand b{font-family:Grotesk,system-ui,sans-serif;font-size:17px;color:var(--text);display:block;margin-bottom:10px;letter-spacing:-.02em}
+.fbrand b s{text-decoration:none;color:var(--cyan)}
+.fbrand p{margin:0 0 14px;max-width:280px}
+.fcol h5{margin:0 0 12px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);font-family:var(--mono);font-weight:500}
+.fcol a{display:block;color:var(--muted);font-size:14.5px;margin-bottom:9px}
+.fcol a:hover{color:var(--text);text-decoration:none}
+.fbot{display:flex;gap:16px;flex-wrap:wrap;padding-top:26px;border-top:1px solid var(--line);color:var(--dim);font-size:13.5px}
+.fbot .sp{margin-left:auto;display:flex;gap:18px;flex-wrap:wrap}
+.stat{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:13px}
+.stat s{width:6px;height:6px;border-radius:50%;background:var(--green);text-decoration:none}
+
+.rv{opacity:0;transform:translateY(18px);transition:opacity .8s var(--sp),transform .8s var(--sp)}
+.rv.in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.rv{opacity:1;transform:none}}
 </style>
 </head>
 <body>
-<div class="wrap">
 
-  <header>
-    <span class="name">Argus<s>.</s></span>
-    <span class="tag">Free · macOS 14 or later · Apple silicon</span>
-  </header>
-
-  <div class="hero">
-    <h1>Know what changed.<br>From the notch.</h1>
-    <p class="lead">Argus watches the network you are on and what your Mac exposes to it, then says in plain English the moment something changes. It is silent the rest of the time.</p>
-    <div class="cta">
-      <a class="btn" href="https://github.com/Saidileepkumarmukkamala/argus/releases/latest/download/Argus.zip">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
-        Download for Mac
-      </a>
-      <a class="btn2" href="https://github.com/Saidileepkumarmukkamala/argus">Read the source</a>
-      <a class="coffee" href="https://buymeacoffee.com/ssaiii" target="_blank" rel="noopener">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13v6a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8Z"/><path d="M17 9h1.5a2.5 2.5 0 0 1 0 5H17"/><path d="M8 2v2.5M12 2v2.5"/></svg>
-        Buy me a coffee
-      </a>
-    </div>
-    <div class="meta" style="margin-top:16px">Version 1.5.0 · 690 KB · no account, no telemetry</div>
+<!-- ============ the hero is the top of a screen ============ -->
+<div class="band hero" id="heroband">
+  <div class="mbar">
+    <span class="l"><a class="mark" href="#">Argus<s>.</s></a></span>
+    <span class="r">
+      <a href="#moments">Signals</a><a href="#board">Board</a><a href="#limits">Limits</a><a href="#install">Install</a>
+      <a href="https://github.com/Saidileepkumarmukkamala/argus">GitHub</a>
+      <a class="dl" href="https://github.com/Saidileepkumarmukkamala/argus/releases/latest/download/Argus.zip">Download</a>
+    </span>
   </div>
-
-  <div class="screen">
-    <div class="mbar">
-      <i style="width:13px"></i><i style="width:32px"></i><i style="width:24px"></i><i style="width:27px"></i><i style="width:25px"></i>
-      <span class="r"><i style="width:13px"></i><i style="width:13px"></i><i style="width:15px"></i><i style="width:46px"></i></span>
-    </div>
-    <div class="stage" id="stage">
-      <div class="notch" id="notch">
-        <svg id="nsvg" width="600" height="200" viewBox="0 0 600 200"><path id="npath" fill="#000"/></svg>
-        <div class="ncontent" id="ncontent"></div>
+  <div class="stage" id="herostage">
+    <div class="wrap herobody">
+      <h1>Know what changed.<br>From the notch.</h1>
+      <p class="lede">Argus watches the network you're on and what your Mac exposes to it, and says one plain sentence when something changes. The rest of the time it is silent.</p>
+      <div class="cta">
+        <a class="btn" href="https://github.com/Saidileepkumarmukkamala/argus/releases/latest/download/Argus.zip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+          Download for Mac</a>
+        <a class="btn2" href="https://github.com/Saidileepkumarmukkamala/argus">Read the source</a>
+        <a class="btn2" href="https://buymeacoffee.com/ssaiii" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13v6a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8Z"/><path d="M17 9h1.5a2.5 2.5 0 0 1 0 5H17"/><path d="M8 2v2.5M12 2v2.5"/></svg>
+          Buy me a coffee</a>
       </div>
+      <div class="vline">1.5.0 · 690 KB · free, open source · macOS 14+ · no account, no telemetry</div>
     </div>
   </div>
-  <div class="readout" id="readout"></div>
-  <p class="caption">The black shape is the app, drawn at the size it really is on a 14-inch MacBook. It cycles through real alerts, the status board, and the optional always-on stats strip. The text beneath is the same card, set at reading size.</p>
+</div>
 
-  <section id="signals">
-    <h2>What it tells you</h2>
-    <p class="sub">Each signal is detected on its own and explained in one card that says what to do about it. Amber needs a decision, green is for your information. Nothing repeats, and networks you mark as home stay quiet.</p>
-    <div class="grid" id="sig"></div>
-  </section>
+<div class="wrap">
+  <div class="readout">
+    <div class="cur" id="readout"></div>
+    <div class="honest">The black shape above is the app, drawn at the size it really is on a 14-inch MacBook. <em>Open this page full-width on one and it is 1:1.</em> It cycles through alerts Argus actually sends, the status board, and the optional stats strip.</div>
+  </div>
+</div>
 
-  <section id="status">
-    <h2>Everything about your Mac, on one board</h2>
-    <p class="sub">Click the notch. Twenty-six checks, each green or amber, each naming the setting to change. The menu bar shield carries an amber dot while anything needs attention.</p>
-    <div class="checks" id="checks"></div>
-  </section>
+<!-- ============ moments ============ -->
+<div class="wrap">
+  <section id="moments">
+    <div class="shead rv">
+      <h2>What it says,<br>and when.</h2>
+      <p>Six moments from an ordinary week. Each is one card, in the notch, with what to do about it. Amber needs a decision. Green is for your information. Nothing repeats, and networks you mark as home stay quiet.</p>
+    </div>
+    <div class="hair"></div>
+    <div id="momentlist"></div>
 
-  <section id="live">
-    <h2>A live strip, when you want one</h2>
-    <p class="sub">Turn on <b>Always-on stats</b> in the menu and the notch keeps a thin readout of processor load, memory in use and Wi-Fi throughput. It is off by default, and it costs about 0.2% of one core.</p>
-    <div class="facts">
-      <div class="fact"><b>0.2% CPU idle</b><span>Measured over an hour of normal use with every signal running.</span></div>
-      <div class="fact"><b>58 MB, flat</b><span>Memory does not climb. State is pruned on every save.</span></div>
-      <div class="fact"><b>No network calls</b><span>Argus never contacts a server, including ours. There is no ours.</span></div>
-      <div class="fact"><b>No entitlements</b><span>Nothing privileged, no Full Disk Access, no kernel extension.</span></div>
+    <div class="more rv">
+      <h3>Sixteen more it watches for</h3>
+      <ul class="morelist" id="morelist"></ul>
     </div>
   </section>
 
-  <section id="limits">
-    <h2>What Argus cannot do</h2>
-    <p class="sub">It is awareness, not protection. A security tool that oversells itself is worse than none.</p>
-    <div class="grid" id="cant"></div>
+  <!-- ============ board ============ -->
+  <section id="board">
+    <div class="shead rv">
+      <h2>Click the notch.<br>Everything, on one board.</h2>
+      <p>Twenty-six checks with the value behind each one, so "Firewall" is never just a green dot, it's "On", and "Apps open to the network" names the process and the port.</p>
+    </div>
+    <div class="bandwrap rv"><div class="band scene">
+      <div class="mbar"><span class="l"><i style="width:13px"></i><i style="width:30px"></i><i style="width:22px"></i><i style="width:26px"></i></span>
+        <span class="r"><i style="width:12px"></i><i style="width:12px"></i><i style="width:14px"></i><i style="width:44px"></i></span></div>
+      <div class="stage" data-kind="board" style="height:330px"></div>
+    </div></div>
+    <div class="threecol rv">
+      <div><h3>Amber means decide</h3><p>Something needs a choice from you: stealth mode off, a dev server reachable by the whole café. Each row names the setting to change.</p></div>
+      <div><h3>Green means known</h3><p>Not "safe", known. FileVault on, no custom root certificates, no one connected. The board is a statement of fact, not a grade.</p></div>
+      <div><h3>The shield keeps score</h3><p>The menu bar shield carries an amber dot while anything needs attention, and nothing otherwise. It is the only thing Argus shows when it has nothing to say.</p></div>
+    </div>
   </section>
 
+  <!-- ============ always-on ============ -->
+  <section id="live">
+    <div class="shead rv">
+      <h2>A strip,<br>when you want one.</h2>
+      <p>Turn on <b>Always-on stats</b> in the menu and the notch keeps a thin readout of processor load, memory, network throughput and Wi-Fi signal. It yields to alerts and comes back when they close. Off by default.</p>
+    </div>
+    <div class="bandwrap rv"><div class="band scene">
+      <div class="mbar"><span class="l"><i style="width:13px"></i><i style="width:30px"></i><i style="width:22px"></i><i style="width:26px"></i></span>
+        <span class="r"><i style="width:12px"></i><i style="width:12px"></i><i style="width:14px"></i><i style="width:44px"></i></span></div>
+      <div class="stage" data-kind="stats" style="height:120px"></div>
+    </div></div>
+    <div class="facts rv">
+      <div><b>0.2%</b><span>of one core at idle, measured over an hour with every signal running.</span></div>
+      <div><b>58 MB</b><span>flat. State is pruned on every save, so memory does not climb.</span></div>
+      <div><b>0 calls</b><span>Argus never contacts a server, including ours. There is no ours.</span></div>
+      <div><b>0 entitlements</b><span>Nothing privileged. No Full Disk Access, no kernel extension.</span></div>
+    </div>
+  </section>
+
+  <!-- ============ limits ============ -->
+  <section id="limits">
+    <div class="shead rv">
+      <h2>What Argus<br>cannot do.</h2>
+      <p>It is awareness, not protection. A security tool that oversells itself is worse than none, so this list is on the front page.</p>
+    </div>
+    <ol class="limits rv" id="limitlist"></ol>
+  </section>
+
+  <!-- ============ compare ============ -->
   <section id="compare">
-    <h2>Beside the tools you already run</h2>
-    <p class="sub">Argus is built to sit next to a firewall and a settings auditor, not to replace either.</p>
-    <div class="tw"><table>
+    <div class="shead rv">
+      <h2>Beside the tools<br>you already run.</h2>
+      <p>Argus is built to sit next to a firewall and a settings auditor, not to replace either.</p>
+    </div>
+    <div class="tw rv"><table>
       <tr><th></th><th>Argus</th><th>Pareto Security</th><th>Objective-See</th><th>Little Snitch</th></tr>
-      <tr><td>Settings checklist</td><td class="y">26 checks</td><td class="y">30+, one-click fixes</td><td class="n">—</td><td class="n">—</td></tr>
+      <tr><td>Settings checklist</td><td class="y">26 checks, with values</td><td class="y">30+, one-click fixes</td><td class="n">—</td><td class="n">—</td></tr>
       <tr><td>Network change narration</td><td class="y">Yes</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
       <tr><td>Router impersonation, HTTPS interception</td><td class="y">Yes</td><td class="n">—</td><td class="n">—</td><td class="n">—</td></tr>
       <tr><td>Exposure judged by network trust</td><td class="y">Yes</td><td class="n">—</td><td class="n">Lists sockets</td><td class="n">—</td></tr>
@@ -245,10 +313,13 @@
     </table></div>
   </section>
 
+  <!-- ============ install ============ -->
   <section id="install">
-    <h2>Four steps, one of them annoying</h2>
-    <p class="sub">Notarizing an app needs a paid Apple account this project does not have, so macOS blocks the first launch and you clear it yourself. The checksum and the whole source are published so you never take the download on trust.</p>
-    <ol class="steps">
+    <div class="shead rv">
+      <h2>Four steps,<br>one of them annoying.</h2>
+      <p>Notarizing an app needs a paid Apple account this project does not have, so macOS blocks the first launch and you clear it yourself. The checksum and the whole source are published so you never take the download on trust.</p>
+    </div>
+    <ol class="steps rv">
       <li><div>Download, unzip, drag <b>Argus</b> into Applications.</div></li>
       <li><div>Clear the download flag on this one app:
         <div style="margin-top:9px"><code>xattr -dr com.apple.quarantine /Applications/Argus.app</code></div>
@@ -258,62 +329,61 @@
     </ol>
   </section>
 
+  <!-- ============ verify ============ -->
   <section id="verify">
-    <h2>Build it yourself in ten seconds</h2>
-    <p class="sub">Eight Swift files, no dependencies, no package manager. Everything Argus reads comes from public macOS tools you can run yourself.</p>
-    <pre>shasum -a 256 ~/Downloads/Argus.zip
+    <div class="shead rv">
+      <h2>Build it yourself<br>in ten seconds.</h2>
+      <p>Eight Swift files, no dependencies, no package manager. Everything Argus reads comes from public macOS tools you can run yourself.</p>
+    </div>
+    <pre class="rv">shasum -a 256 ~/Downloads/Argus.zip
 # compare against the checksum on the release page
 
 git clone https://github.com/Saidileepkumarmukkamala/argus
 cd argus/app &amp;&amp; ./build.sh &amp;&amp; open Argus.app</pre>
-    <p class="caption mono" style="margin-top:16px">route · ifconfig · arp · scutil · lsof · launchctl · fdesetup · socketfilterfw · spctl · csrutil · sysadminctl · profiles · security · systemextensionsctl · defaults</p>
+    <p class="tools rv">route · ifconfig · arp · scutil · lsof · launchctl · fdesetup · socketfilterfw · spctl · csrutil · sysadminctl · profiles · security · systemextensionsctl · defaults</p>
   </section>
 
+  <!-- ============ writing ============ -->
   <section id="writing">
-    <h2>Writing</h2>
-    <p class="sub">Notes on Mac security and what the notch is good for.</p>
-    <div class="posts">
+    <div class="shead rv">
+      <h2>Writing.</h2>
+      <p>Notes on Mac security and what the notch is good for. Useful whether or not you install anything.</p>
+    </div>
+    <div class="posts rv">
       <a class="post" href="blog/free-macos-notch-apps.html">The best free macOS notch apps <span>Guide</span></a>
-      <a class="post" href="blog/public-wifi-safety-mac.html">Staying safe on public Wi-Fi with a Mac <span>Guide</span></a>
-      <a class="post" href="blog/free-mac-security-tools.html">Free Mac security tools worth running <span>Guide</span></a>
-      <a class="post" href="blog/mac-security-settings-checklist.html">The Mac security settings checklist <span>Checklist</span></a>
+      <a class="post" href="blog/public-wifi-safety-mac.html">How to tell if a public Wi-Fi network is watching you <span>Guide</span></a>
+      <a class="post" href="blog/free-mac-security-tools.html">Free Mac security tools, and what each one actually does <span>Guide</span></a>
+      <a class="post" href="blog/mac-security-settings-checklist.html">The Mac security settings that actually matter <span>Checklist</span></a>
     </div>
   </section>
 
+  <!-- ============ support ============ -->
   <section id="support">
-    <h2>Argus is free, and stays free</h2>
-    <p class="sub">There is no pro version, no licence key and no upsell three screens in. Everything on this page is everything there is.</p>
-    <div class="support">
-      <div>
-        <b>Buy me a coffee</b>
-        <span>One-off, no account needed. It pays for a second Mac to test on.</span>
-      </div>
-      <a class="coffee" href="https://buymeacoffee.com/ssaiii" target="_blank" rel="noopener">
+    <div class="shead rv">
+      <h2>Free, and<br>staying free.</h2>
+      <p>There is no pro version, no licence key and no upsell three screens in. Everything on this page is everything there is.</p>
+    </div>
+    <div class="support rv">
+      <div><b>Buy me a coffee</b><span>One-off, no account needed. It pays for a second Mac to test on.</span></div>
+      <a class="btn2" href="https://buymeacoffee.com/ssaiii" target="_blank" rel="noopener">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13v6a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V8Z"/><path d="M17 9h1.5a2.5 2.5 0 0 1 0 5H17"/><path d="M8 2v2.5M12 2v2.5"/></svg>
-        Buy me a coffee
-      </a>
+        Buy me a coffee</a>
     </div>
   </section>
-
 </div>
 
 <footer>
   <div class="fmark" aria-hidden="true">ARGUS</div>
   <div class="wrap">
     <div class="fin">
-      <div class="fbrand">
-        <b>Argus<s>.</s></b>
+      <div class="fbrand"><b>Argus<s>.</s></b>
         <p>A plain-English narrator for what changed about your network and your Mac's exposure. Lives in the notch.</p>
-        <span class="stat"><s></s> Offline by design</span>
-      </div>
-      <div class="fcol"><h5>Product</h5>
-        <a href="#signals">Signals</a><a href="#status">Status board</a><a href="#limits">Limits</a><a href="#compare">Comparison</a></div>
+        <span class="stat"><s></s> Offline by design</span></div>
+      <div class="fcol"><h5>Product</h5><a href="#moments">Signals</a><a href="#board">Status board</a><a href="#limits">Limits</a><a href="#compare">Comparison</a></div>
       <div class="fcol"><h5>Get it</h5>
         <a href="https://github.com/Saidileepkumarmukkamala/argus/releases/latest/download/Argus.zip">Download</a>
-        <a href="https://github.com/Saidileepkumarmukkamala/argus/releases">Releases</a>
-        <a href="#install">Install guide</a><a href="#verify">Build from source</a></div>
-      <div class="fcol"><h5>Writing</h5>
-        <a href="blog/">All posts</a><a href="blog/free-macos-notch-apps.html">Notch apps</a>
+        <a href="https://github.com/Saidileepkumarmukkamala/argus/releases">Releases</a><a href="#install">Install guide</a><a href="#verify">Build from source</a></div>
+      <div class="fcol"><h5>Writing</h5><a href="blog/">All posts</a><a href="blog/free-macos-notch-apps.html">Notch apps</a>
         <a href="blog/public-wifi-safety-mac.html">Public Wi-Fi</a><a href="blog/mac-security-settings-checklist.html">Settings checklist</a></div>
       <div class="fcol"><h5>Project</h5>
         <a href="https://github.com/Saidileepkumarmukkamala/argus">Source</a>
@@ -321,35 +391,46 @@ cd argus/app &amp;&amp; ./build.sh &amp;&amp; open Argus.app</pre>
         <a href="https://github.com/Saidileepkumarmukkamala/argus/blob/main/README.md">Documentation</a>
         <a href="https://buymeacoffee.com/ssaiii" target="_blank" rel="noopener">Buy me a coffee</a></div>
     </div>
-    <div class="fbot">
-      <span>© 2026 Argus. Free and open source.</span>
-      <span class="sp"><span>Not affiliated with Apple.</span><span>Vendor names from the IEEE registry.</span></span>
-    </div>
+    <div class="fbot"><span>© 2026 Argus. Free and open source.</span>
+      <span class="sp"><span>Not affiliated with Apple.</span><span>Vendor names from the IEEE registry.</span></span></div>
   </div>
 </footer>
 
 <script>
-const SIGNALS=[
- ['a','Open or weak Wi-Fi','You joined a network with no encryption, or WEP/WPA1. It also names what your Mac is announcing to everyone else on it.'],
- ['a','VPN dropped','Your tunnel went down and you are on the network directly. WireGuard and Tailscale never say so. Argus also remembers where you normally use one.'],
- ['a','Router impersonation','The gateway kept its address but changed hardware. That is what ARP spoofing looks like, and what a replaced router looks like. It says both.'],
- ['a','HTTPS interception','Optional. One request to apple.com on a new network: if the certificate is not Apple’s, someone is reading encrypted traffic. Sign-in portals are named as portals.'],
- ['a','Same name, different network','Another access point is broadcasting a network name you trust. That is how an evil twin catches people.'],
- ['a','New trusted root certificate','Something added a certificate authority your Mac now trusts. Its owner can read your encrypted traffic.'],
- ['a','Someone signed in to your Mac','A remote login or screen sharing session opened, with the address it came from. It tells you when the session ends too.'],
- ['a','An app is reading your keystrokes','A process installed a keyboard event tap, so it sees every key you press in every app. Argus names it and its code signer. Normal for text expanders; worth knowing regardless.'],
- ['g','Camera or microphone turned on','The moment either goes live, and when it stops. Argus cannot name the app responsible, and says so.'],
- ['g','An app became reachable','A process started listening on all interfaces, so every device on the network can reach it. Dev servers on 0.0.0.0 are the classic case.'],
- ['g','Sharing switched on','Remote Login, Screen Sharing, File Sharing or Remote Management came on, and others can now try to connect.'],
- ['g','New device at home','Only on networks you mark as Home. Named by its maker from the IEEE vendor registry.'],
- ['g','New background item','A new login item or launch agent will run automatically from now on. The first thing malware does, and also what every installer does.'],
- ['g','New system extension','A kernel-level extension went active. VPNs, security tools and virtual cameras install these.'],
- ['g','Unnotarized app launched','An app opened that Apple has never checked for known malware.'],
- ['g','SSH keys or shell startup changed','Someone can log in with a new key, or your shell will run something new every time you open a terminal.'],
- ['g','DNS resolver changed','Your lookups moved, named when it is a known resolver: Cloudflare, Google, Quad9, the router, the VPN.'],
- ['g','Scheduled jobs changed','A cron entry appeared or changed, so something new runs on a timer.'],
+/* ============ data ============ */
+const HEX={amber:'#ff9e42',green:'#61eb9e',cyan:'#5cdbff'};
+const SCENES=[
+ {c:'amber',i:'wifi',t:'Open Wi-Fi: Airport Free WiFi',d:'No encryption. Anyone nearby can read unencrypted traffic. Use a VPN here.',m:'OPEN · en0 · GW 172.16.0.1',
+  h:'Open or weak Wi-Fi',when:'You open the lid at an airport.',do:'Use a VPN, or find a network with a password. Argus also tells you what name your Mac is announcing to everyone on it.'},
+ {c:'amber',i:'lock',t:'VPN dropped',d:'You are on Hotel Guest directly now. Reconnect if you meant to stay tunnelled.',m:'WPA2 · en0 · GW 10.1.0.1',
+  h:'VPN dropped',when:'Your tunnel goes down in a hotel lobby.',do:'Reconnect. WireGuard and Tailscale never say so themselves. Argus remembers where you normally use one and says when you don’t.'},
+ {c:'green',i:'wave',t:'node is reachable from this network',d:'It started listening on port 3000 on every interface. Bind it to localhost if that was not intended.',m:'WPA3 · en0 · GW 10.0.0.1',
+  h:'An app became reachable',when:'You start a dev server in a café.',do:'Bind it to localhost unless you meant to share it. On a network you’ve marked as home, this one stays quiet.'},
+ {c:'amber',i:'router',t:'Router identity changed',d:'The gateway at 10.0.0.1 now answers from different hardware. That is what ARP spoofing looks like.',m:'WPA3 · en0 · GW 10.0.0.1',
+  h:'Router impersonation',when:'The gateway keeps its address but its hardware changes.',do:'Prefer a VPN until you know whether the router was replaced or someone is sitting in the middle. Argus says both are possible, because both are.'},
+ {c:'green',i:'cam',t:'Camera turned on',d:'Something started using the camera. Argus cannot name the app, and does not pretend to.',m:'WPA3 · en0 · HOME',
+  h:'Camera or microphone on',when:'Something starts using the camera.',do:'Nothing, if it was you. Look around if it wasn’t. Naming the app needs an Apple entitlement this project cannot get, so Argus says it cannot.'},
+ {c:'amber',i:'key',t:'An app is reading your keystrokes',d:'Command X installed a keyboard event tap. Signed by Sindre Sorhus. Normal for shortcut tools.',m:'WPA3 · en0 · HOME',
+  h:'Keystroke access',when:'An app installs a keyboard event tap.',do:'Fine for a text expander or a shortcut tool. Ask why for anything else. Argus names the process and who signed it.'},
+ {board:true,t:'Status board',d:'Twenty-six checks on one screen, each with the value behind it.'},
+ {stats:true,t:'Always-on stats',d:'An optional strip with live processor load, memory, throughput and Wi-Fi signal.'}];
+const MORE=[
+ ['a','Weak Wi-Fi security','WEP or WPA1. Treated like open.'],
+ ['a','Same name, different network','A familiar network name served by different hardware. How an evil twin catches people.'],
+ ['a','HTTPS interception','Optional. One request to apple.com on a new network; if the certificate isn’t Apple’s, someone is reading encrypted traffic.'],
+ ['a','A proxy set by the network','Normal at work. Not on café Wi-Fi.'],
+ ['a','New trusted root certificate','Its owner can read your encrypted traffic.'],
+ ['a','Someone signed in to your Mac','A remote login or screen-sharing session, with the address it came from.'],
+ ['g','Microphone turned on','And when it stops.'],
+ ['g','Sharing switched on','Remote Login, Screen Sharing, File Sharing or Remote Management.'],
+ ['g','New device at home','Only on networks you mark as Home. Named by its maker.'],
+ ['g','New background item','A new login item or launch agent. The first thing malware does; also what every installer does.'],
+ ['g','New system extension','VPNs, security tools and virtual cameras install these.'],
+ ['g','Unnotarized app launched','An app Apple has never checked for known malware.'],
+ ['g','SSH keys or shell startup changed','Someone can log in with a new key, or your shell runs something new.'],
+ ['g','DNS resolver changed','Named when it’s a known resolver: Cloudflare, Google, Quad9, the router, the VPN.'],
+ ['g','Scheduled jobs changed','A cron entry appeared or changed.'],
  ['g','/etc/hosts changed','The file that overrides domain lookups was rewritten.']];
-
 const CHECKS=[['Disk encryption',1,'FileVault on'],['Firewall',1,'On'],['Stealth mode',0,'Off'],['Gatekeeper',1,'On'],
 ['System integrity',1,'On'],['Screen lock',1,'Immediately'],['Sharing services',1,'None on'],['Apps open to the network',0,'node:3000'],
 ['Software updates',1,'None pending'],['Automatic updates',1,'Install automatically'],['Malware definitions',1,'v5358 · 12d'],
@@ -357,171 +438,118 @@ const CHECKS=[['Disk encryption',1,'FileVault on'],['Firewall',1,'On'],['Stealth
 ['Configuration profiles',1,'1 installed'],['Proxy',1,'None'],['Your account',1,'Standard'],['Share analytics with Apple',1,'Off'],
 ['Visible as',1,"Sai's MacBook Pro"],['Device management',1,'Not enrolled'],['System extensions',1,'1 active'],
 ['Someone connected',1,'No one'],['Keystroke access',0,'Command X'],['This network',1,'Home · WPA3'],['VPN',1,'Not connected']];
-
 const CANT=[['It does not block anything','Blocking needs Apple’s network-extension entitlement, which needs a paid account. LuLu and Little Snitch do that job well. Argus tells you what they cannot.'],
  ['It does not inspect traffic','No packet capture, no DNS filtering, no idea what your apps send. It reads your Mac’s own state and the shape of the network.'],
  ['It is not antivirus','It sees persistence and notarization, where most Mac malware shows up first, but it never scans a file.'],
  ['It cannot name the app using your camera','That needs Apple’s Endpoint Security entitlement, another paid-account gate. Argus reports that the camera went live, not who turned it on.'],
  ['It cannot see privacy grants','Which apps hold Accessibility or Screen Recording rights sits behind Full Disk Access. Argus does not ask for it.'],
  ['Wi-Fi names need Location','macOS hides network names from apps without Location access. Argus identifies networks by their router instead, and only asks if you want names.'],
- ['It is not notarized','A paid Apple account again. The first launch needs one command, shown above. The source is short enough to read.']];
-
-const sig=document.getElementById('sig');
-SIGNALS.forEach(([k,t,d])=>{const e=document.createElement('div');e.className='c';
-  e.innerHTML='<div class="t"><s style="background:var(--'+(k==='a'?'amber':'green')+')"></s>'+t+'</div><p>'+d+'</p>';sig.appendChild(e)});
-const ch=document.getElementById('checks');
-CHECKS.forEach(([t,ok,v])=>{const e=document.createElement('div');e.className='chk';
-  e.innerHTML='<s style="background:var(--'+(ok?'green':'amber')+')"></s><em>'+t+'</em><u>'+v+'</u>';ch.appendChild(e)});
-const cn=document.getElementById('cant');
-CANT.forEach(([t,d])=>{const e=document.createElement('div');e.className='c';e.innerHTML='<div class="t">'+t+'</div><p>'+d+'</p>';cn.appendChild(e)});
-
-/* ---- the notch, drawn at true proportion ----
-   A 14-inch MacBook is 1512 pt wide with a 185x32 pt notch. The screen panel below is the
-   full content width, so one CSS pixel here is (panelWidth / 1512) of a real point.        */
-const SVGW=600, REAL_SCREEN=1512, NOTCH_PT=185, NOTCH_H_PT=32;
-const stage=document.getElementById('stage'), npath=document.getElementById('npath'),
-      ncontent=document.getElementById('ncontent'), readout=document.getElementById('readout');
-let SC=1, NW=120, NH=21;
-function measure(){
-  const w=stage.getBoundingClientRect().width||1040;
-  SC=w/REAL_SCREEN; NW=NOTCH_PT*SC; NH=NOTCH_H_PT*SC;
-  document.getElementById('nsvg').setAttribute('width',w);
-  document.getElementById('nsvg').setAttribute('viewBox','0 0 '+w+' 200');
-  SVGWc=w;
-}
-let SVGWc=600;
-function corner(cx,cy,r,a0,a1,n,steps=20){const p=[];for(let k=0;k<=steps;k++){const t=(a0+(a1-a0)*k/steps)*Math.PI/180,c=Math.cos(t),s=Math.sin(t);
-  p.push([cx+r*Math.sign(c)*Math.pow(Math.abs(c),2/n),cy+r*Math.sign(s)*Math.pow(Math.abs(s),2/n)]);}return p}
-function path(bodyW,depth,ear,bot){
-  const x1=(SVGWc-bodyW)/2,x2=x1+bodyW,yB=NH+depth;
-  const pts=[...corner(x1-ear,ear,ear,-90,0,1.5),...corner(x1+bot,yB-bot,bot,180,90,5),
-             ...corner(x2-bot,yB-bot,bot,90,0,5),...corner(x2+ear,ear,ear,180,270,1.5)];
-  return 'M'+pts.map(p=>p[0].toFixed(1)+' '+p[1].toFixed(1)).join('L')+'Z';
-}
-let st={d:0,w:NW,ear:6,bot:12};
-function draw(){npath.setAttribute('d',path(st.w,st.d,st.ear,st.bot));
-  ncontent.style.top=NH+'px';ncontent.style.width=st.w+'px';ncontent.style.height=Math.max(0,st.d)+'px';
-  ncontent.style.borderRadius='0 0 '+st.bot+'px '+st.bot+'px'}
-function tween(to,ms){return new Promise(res=>{const from={...st},t0=performance.now();
-  (function f(t){const k=Math.min(1,(t-t0)/ms),e=1-Math.pow(1-k,3);
-    for(const key in to)st[key]=from[key]+(to[key]-from[key])*e;draw();k<1?requestAnimationFrame(f):res()})(t0)})}
+ ['It is not notarized','A paid Apple account again. The first launch needs one command, shown below. The source is short enough to read.']];
 const ICON={wifi:'<path d="M2 8.5a15 15 0 0120 0M5.5 12a10 10 0 0113 0M9 15.5a5 5 0 016 0"/><circle cx="12" cy="19" r="1.2" fill="currentColor" stroke="none"/>',
  lock:'<rect x="4" y="10" width="16" height="10" rx="2.5"/><path d="M8 10V7a4 4 0 018 0"/>',
  wave:'<path d="M4 12h3l2.5-6 4 13 3-9 1.5 2H21"/>',
  cam:'<rect x="3" y="7" width="12" height="10" rx="2.5"/><path d="M15 11l6-3v8l-6-3z"/>',
- dot:'<circle cx="12" cy="12" r="3"/><path d="M5.5 5.5a9 9 0 000 13M18.5 5.5a9 9 0 010 13"/>',
  key:'<circle cx="8" cy="12" r="3.4"/><path d="M11.4 12H21M18 12v3.2M15 12v2.4"/>',
  router:'<rect x="3" y="12" width="18" height="8" rx="2"/><path d="M7 12V9a5 5 0 0110 0v3"/><circle cx="8" cy="16" r="1" fill="currentColor" stroke="none"/>'};
-const SCENES=[
- {c:'amber',i:'wifi',t:'Open Wi-Fi: Airport Free WiFi',d:'No encryption. Anyone nearby can read unencrypted traffic. Use a VPN here.',m:'OPEN · en0 · GW 172.16.0.1'},
- {c:'amber',i:'lock',t:'VPN dropped',d:'You are on Hotel Guest directly now. Reconnect if you meant to stay tunnelled.',m:'WPA2 · en0 · GW 10.1.0.1'},
- {stats:true,t:'Always-on stats',d:'An optional strip under the notch with live processor load, memory, network throughput and Wi-Fi signal. Off by default.'},
- {c:'green',i:'wave',t:'node is reachable from this network',d:'It started listening on port 3000 on every interface. Bind it to localhost if that was not intended.',m:'WPA3 · en0 · GW 10.0.0.1'},
- {board:true,t:'Status board',d:'Twenty-six checks on one screen, each with the value behind it. Three need attention here: a dev server open to the network, stealth mode off, and an app reading keystrokes.'},
- {c:'amber',i:'router',t:'Router identity changed',d:'The gateway at 10.0.0.1 now answers from different hardware. That is what ARP spoofing looks like.',m:'WPA3 · en0 · GW 10.0.0.1'},
- {c:'green',i:'cam',t:'Camera turned on',d:'Something started using the camera. Argus cannot name the app, and does not pretend to.',m:'WPA3 · en0 · HOME'},
- {c:'amber',i:'key',t:'An app is reading your keystrokes',d:'Command X installed a keyboard event tap. Signed by Sindre Sorhus. Normal for shortcut tools.',m:'WPA3 · en0 · HOME'}];
-const HEX={amber:'#ff9e42',green:'#61eb9e',cyan:'#5cdbff'};
+
+/* ============ page lists ============ */
+document.getElementById('momentlist').innerHTML=SCENES.slice(0,6).map((s,i)=>`
+  <div class="moment rv" id="m${i}">
+    <div class="band scene"><div class="mbar"><span class="l"><i style="width:13px"></i><i style="width:30px"></i><i style="width:22px"></i><i style="width:26px"></i></span>
+      <span class="r"><i style="width:12px"></i><i style="width:12px"></i><i style="width:14px"></i><i style="width:44px"></i></span></div>
+      <div class="stage" data-scene="${i}" style="height:150px"></div></div>
+    <div class="cap">
+      <div class="n">0${i+1}</div>
+      <div><h3><s class="lvl" style="background:${HEX[s.c]};text-decoration:none"></s>${s.h}</h3><p class="when">${s.when}</p></div>
+      <div class="do"><b>WHAT TO DO</b>${s.do}</div>
+    </div>
+  </div>`).join('');
+document.getElementById('morelist').innerHTML=MORE.map(([k,t,d])=>`<li><s style="background:${k==='a'?HEX.amber:HEX.green}"></s><div><b>${t}</b><span>${d}</span></div></li>`).join('');
+document.getElementById('limitlist').innerHTML=CANT.map(([t,d])=>`<li><div><h3>${t}</h3><p>${d}</p></div></li>`).join('');
+
+/* ============ the notch, one per screen band, drawn at true proportion ============
+   A 14-inch MacBook is 1512 pt wide with a 185x32 pt notch. Each band is the full width of
+   its container, so one CSS pixel is (bandWidth / 1512) of a real point. Geometry always uses
+   that true scale. Type inside gets a floor so narrow screens stay readable.                */
+const REAL=1512, NPT=185, NHPT=32;
+function corner(cx,cy,r,a0,a1,n,steps=20){const p=[];for(let k=0;k<=steps;k++){const t=(a0+(a1-a0)*k/steps)*Math.PI/180,c=Math.cos(t),s=Math.sin(t);
+  p.push([cx+r*Math.sign(c)*Math.pow(Math.abs(c),2/n),cy+r*Math.sign(s)*Math.pow(Math.abs(s),2/n)]);}return p}
 function clock(){const d=new Date();return [d.getHours(),d.getMinutes(),d.getSeconds()].map(n=>String(n).padStart(2,'0')).join(':')}
-function hairline(col){return '<div class="nhair" style="left:'+px(14)+'px;right:'+px(14)+'px;--nhc:'+col+'"></div>'}
-function px(pt){return Math.max(1,pt*SC)}
-function fs(pt,floor){return Math.max(floor,pt*SC)}
-function renderCard(s){
-  const col=HEX[s.c], ic=Math.max(12,px(30)), tSize=fs(13,7.5), bSize=fs(11,6.5), mSize=fs(9.5,6);
-  const room=tSize>=8.2, ring=Math.max(10,px(22)), r=ring/2-Math.max(.8,px(1.6));
-  ncontent.innerHTML=hairline(HEX.cyan)+
-    '<div class="ncard" style="gap:'+Math.max(5,px(12))+'px;padding:'+Math.max(6,px(14))+'px '+Math.max(7,px(16))+'px 0">'+
-      '<div class="ic" style="width:'+ic+'px;height:'+ic+'px;color:'+col+'">'+
-        '<b style="inset:0"></b><b style="inset:'+(ic*.2)+'px"></b>'+
-        '<u style="width:'+(ic*.26)+'px;height:'+(ic*.26)+'px;box-shadow:0 0 '+px(6)+'px '+col+'"></u></div>'+
-      '<div style="flex:1;min-width:0">'+
-        '<h4 style="font-size:'+tSize+'px;line-height:1.3;margin:0 0 '+px(3)+'px">'+s.t+'</h4>'+
-        (room?'<p style="font-size:'+bSize+'px;line-height:1.4;margin:0">'+s.d+'</p>':'')+
-        '<div class="nmeta" style="font-size:'+mSize+'px;color:'+col+';margin-top:'+px(9)+'px">'+s.m+' · '+clock()+'</div>'+
-      '</div>'+
-      '<svg class="nring" width="'+ring+'" height="'+ring+'" viewBox="0 0 '+ring+' '+ring+'">'+
-        '<circle cx="'+ring/2+'" cy="'+ring/2+'" r="'+r+'" fill="none" stroke="'+col+'" stroke-opacity=".22" stroke-width="'+Math.max(.8,px(1.6))+'"/>'+
-        '<circle cx="'+ring/2+'" cy="'+ring/2+'" r="'+r+'" fill="none" stroke="'+col+'" stroke-width="'+Math.max(.8,px(1.6))+'" stroke-linecap="round"'+
-        ' stroke-dasharray="'+(2*Math.PI*r)+'" stroke-dashoffset="'+(2*Math.PI*r*0.28)+'"/></svg>'+
-    '</div>';
-}
-function renderBoard(){
-  const lSize=fs(10,6.3), dot=Math.max(2.5,px(6)), rows=lSize>=6.4?16:10;
-  const bad=CHECKS.filter(c=>!c[1]).length;
-  ncontent.innerHTML=hairline(HEX.cyan)+
-    '<div style="padding:'+Math.max(6,px(14))+'px '+Math.max(7,px(16))+'px 0">'+
-    '<div class="nhead" style="font-size:'+fs(8.5,5.5)+'px;margin-bottom:'+px(9)+'px">'+
-      '<span style="color:'+HEX.cyan+'">SYSTEM STATUS</span>'+
-      '<span style="color:'+HEX.amber+'">'+bad+' NEED ATTENTION</span></div>'+
-    '<div class="nrows" style="gap:'+px(5)+'px '+px(26)+'px;font-size:'+lSize+'px">'+
-    CHECKS.slice(0,rows).map(([t,ok,v])=>'<div class="nrow" style="gap:'+Math.max(3,px(7))+'px">'+
-      '<s style="width:'+dot+'px;height:'+dot+'px;background:'+(ok?HEX.green:HEX.amber)+';box-shadow:0 0 '+px(5)+'px '+(ok?HEX.green:HEX.amber)+'"></s>'+
-      '<em>'+t+'</em><u>'+v+'</u></div>').join('')+
-    '</div>'+
-    '<div class="nmeta" style="font-size:'+fs(9,5.8)+'px;color:'+HEX.cyan+';opacity:.8;margin-top:'+px(10)+'px">WPA3 · en0 · GW 10.0.0.1 · '+clock()+'</div>'+
-    '</div>';
-}
-/* The always-on strip: one centred monospace line, exactly the parts the app draws. */
-function renderStats(){
-  const lab=fs(9,6), val=fs(10,6.6);
-  const part=(n,v,c)=>'<i style="font-size:'+lab+'px">'+n+'</i>&nbsp;<b style="font-size:'+val+'px;color:'+c+'">'+v+'</b>';
-  ncontent.innerHTML='<div class="nstats">'+
-    [part('CPU','12%',HEX.cyan),part('MEM','8.4G','#f5f5f5'),part('NET','↓1.2M ↑340K','#f5f5f5'),part('WIFI','▮▮▮▯ 866M','#f5f5f5')]
-      .join('<s style="font-size:'+lab+'px">&nbsp;&nbsp;·&nbsp;&nbsp;</s>')+'</div>';
-}
-function renderReadout(s){
-  readout.innerHTML='<span class="dot" style="background:var(--'+(s.board||s.stats?'accent':s.c)+')"></span><div><b>'+s.t+'</b><span>'+s.d+'</span></div>';
-}
-/* drawStats() sizes the real strip to its text, clamped to 260-560 pt. Same here, or the
-   line gets clipped at both ends. */
-function statsWidth(){
-  const el=ncontent.querySelector('.nstats');
-  if(!el) return 380*SC;
-  const prev=ncontent.style.width;
-  ncontent.style.width='2400px';
-  const w=el.scrollWidth+30*SC;
-  ncontent.style.width=prev;
-  return Math.max(260*SC,Math.min(560*SC,w));
-}
-function contentDepth(){
-  const prev=ncontent.style.height;
-  ncontent.style.height='auto';
-  // scrollHeight, not firstElementChild: the cyan hairline is the first child and is 1px tall.
-  const h=ncontent.scrollHeight;
-  ncontent.style.height=prev;
-  return Math.round(h+Math.max(6,px(13)));   // the card's bottom padding
-}
-/* Each scene has the width and the dwell the app itself uses; the stats strip is a shallow
-   24 pt band, the board is wide, a card sits between them. */
-function shape(s){
-  if(s.stats) return {w:300*SC, depth:24*SC, dwell:4200};
-  if(s.board) return {w:820*SC, depth:null,   dwell:5200};
-  return {w:600*SC, depth:null, dwell:4000};
-}
-function paint(s){ s.stats?renderStats():s.board?renderBoard():renderCard(s) }
-async function loop(){
-  let i=0;
-  while(true){
-    const s=SCENES[i%SCENES.length];i++;
-    const sh=shape(s);
-    st.w=sh.w; st.ear=px(14); st.bot=px(26); draw();
-    paint(s);
-    if(s.stats){ st.w=statsWidth(); draw() }
-    ncontent.style.opacity=0; renderReadout(s);
-    await tween({d:sh.depth!==null?sh.depth:contentDepth()},520);
-    ncontent.animate([{opacity:0},{opacity:1}],{duration:260,fill:'forwards'});ncontent.style.opacity=1;
-    await new Promise(r=>setTimeout(r,sh.dwell));
-    ncontent.animate([{opacity:1},{opacity:0}],{duration:200,fill:'forwards'});
-    await new Promise(r=>setTimeout(r,200));
-    await tween({d:0},380);
-    st.w=NW;st.ear=px(8);st.bot=px(14);draw();ncontent.innerHTML='';
-    await new Promise(r=>setTimeout(r,800));
+class Notch{
+  constructor(stage){
+    this.stage=stage;
+    const NS='http://www.w3.org/2000/svg';
+    this.svg=document.createElementNS(NS,'svg'); this.path=document.createElementNS(NS,'path'); this.path.setAttribute('fill','#000'); this.svg.appendChild(this.path);
+    this.wrap=document.createElement('div'); this.wrap.className='notch';
+    this.content=document.createElement('div'); this.content.className='ncontent';
+    this.wrap.append(this.svg,this.content); stage.appendChild(this.wrap);
+    this.st={d:0,w:0,ear:0,bot:0}; this.measure(); this.closed(); this.draw();
   }
+  measure(){const w=this.stage.getBoundingClientRect().width||1200; this.W=w; this.SC=w/REAL; this.E=Math.max(this.SC,.62);
+    this.NW=NPT*this.SC; this.NH=NHPT*this.SC; this.svg.setAttribute('width',w); this.svg.setAttribute('height',420); this.svg.setAttribute('viewBox',`0 0 ${w} 420`)}
+  px(pt){return Math.max(1,pt*this.SC)} ex(pt){return Math.max(1,pt*this.E)} fs(pt,f){return Math.max(f,pt*this.E)}
+  closed(){this.st.w=this.NW;this.st.ear=this.px(8);this.st.bot=this.px(14)}
+  opened(kind){const base=kind==='board'?820:kind==='stats'?300:600; this.st.w=Math.min(base*this.E,this.W*.94); this.st.ear=this.px(14); this.st.bot=this.px(26)}
+  pathD(){const {w,d,ear,bot}=this.st, x1=(this.W-w)/2, x2=x1+w, yB=this.NH+d;
+    const pts=[...corner(x1-ear,ear,ear,-90,0,1.5),...corner(x1+bot,yB-bot,bot,180,90,5),...corner(x2-bot,yB-bot,bot,90,0,5),...corner(x2+ear,ear,ear,180,270,1.5)];
+    return 'M'+pts.map(p=>p[0].toFixed(1)+' '+p[1].toFixed(1)).join('L')+'Z'}
+  draw(){this.path.setAttribute('d',this.pathD()); const c=this.content.style;
+    c.top=this.NH+'px'; c.width=this.st.w+'px'; c.height=Math.max(0,this.st.d)+'px'; c.borderRadius=`0 0 ${this.st.bot}px ${this.st.bot}px`}
+  tween(to,ms){return new Promise(res=>{const from={...this.st},t0=performance.now(),f=t=>{const k=Math.min(1,(t-t0)/ms),e=1-Math.pow(1-k,3);
+    for(const key in to)this.st[key]=from[key]+(to[key]-from[key])*e; this.draw(); k<1?requestAnimationFrame(f):res()}; requestAnimationFrame(f)})}
+  depth(){const c=this.content.style,prev=c.height; c.height='auto'; const h=this.content.scrollHeight; c.height=prev; return Math.round(h+Math.max(6,this.ex(13)))}
+  hair(){return `<div class="nhair" style="left:${this.ex(14)}px;right:${this.ex(14)}px"></div>`}
+  card(s){const n=this,col=HEX[s.c],ic=Math.max(12,n.ex(30)),tS=n.fs(13,8),bS=n.fs(11,7),mS=n.fs(9.5,6.3),ring=Math.max(10,n.ex(22)),r=ring/2-Math.max(.8,n.ex(1.6)),sw=Math.max(.8,n.ex(1.6));
+    n.content.innerHTML=n.hair()+`<div class="ncard" style="gap:${Math.max(6,n.ex(12))}px;padding:${Math.max(7,n.ex(14))}px ${Math.max(8,n.ex(16))}px 0">
+      <div class="ic" style="width:${ic}px;height:${ic}px;color:${col}"><b style="inset:0"></b><b style="inset:${ic*.2}px"></b><u style="width:${ic*.26}px;height:${ic*.26}px;box-shadow:0 0 ${n.ex(6)}px ${col}"></u></div>
+      <div style="flex:1;min-width:0"><h4 style="font-size:${tS}px;line-height:1.3;margin-bottom:${n.ex(3)}px">${s.t}</h4>
+        <p style="font-size:${bS}px;line-height:1.4">${s.d}</p>
+        <div class="nmeta" style="font-size:${mS}px;color:${col};margin-top:${n.ex(9)}px">${s.m} · ${clock()}</div></div>
+      <svg class="nring" width="${ring}" height="${ring}" viewBox="0 0 ${ring} ${ring}"><circle cx="${ring/2}" cy="${ring/2}" r="${r}" fill="none" stroke="${col}" stroke-opacity=".22" stroke-width="${sw}"/>
+        <circle cx="${ring/2}" cy="${ring/2}" r="${r}" fill="none" stroke="${col}" stroke-width="${sw}" stroke-linecap="round" stroke-dasharray="${2*Math.PI*r}" stroke-dashoffset="${2*Math.PI*r*.28}"/></svg></div>`}
+  board(){const n=this,lS=n.fs(10,6.8),dot=Math.max(2.5,n.ex(6)),rows=lS>=6.8?22:14,bad=CHECKS.filter(c=>!c[1]).length;
+    n.content.innerHTML=n.hair()+`<div style="padding:${Math.max(7,n.ex(14))}px ${Math.max(8,n.ex(16))}px 0">
+      <div class="nhead" style="font-size:${n.fs(8.5,6)}px;margin-bottom:${n.ex(9)}px"><span style="color:${HEX.cyan}">SYSTEM STATUS</span><span style="color:${HEX.amber}">${bad} NEED ATTENTION</span></div>
+      <div class="nrows" style="gap:${n.ex(5)}px ${n.ex(26)}px;font-size:${lS}px">`+
+      CHECKS.slice(0,rows).map(([t,ok,v])=>`<div class="nrow" style="gap:${Math.max(3,n.ex(7))}px"><s style="width:${dot}px;height:${dot}px;background:${ok?HEX.green:HEX.amber};box-shadow:0 0 ${n.ex(5)}px ${ok?HEX.green:HEX.amber}"></s><em>${t}</em><u>${v}</u></div>`).join('')+
+      `</div><div class="nmeta" style="font-size:${n.fs(9,6)}px;color:${HEX.cyan};opacity:.8;margin-top:${n.ex(10)}px">WPA3 · en0 · GW 10.0.0.1 · ${clock()}</div></div>`}
+  stats(){const n=this,lab=n.fs(9,6.5),val=n.fs(10,7.2),part=(k,v,c)=>`<i style="font-size:${lab}px">${k}</i>&nbsp;<b style="font-size:${val}px;color:${c}">${v}</b>`;
+    n.content.innerHTML=`<div class="nstats">${[part('CPU','12%',HEX.cyan),part('MEM','8.4G','#f5f5f5'),part('NET','↓1.2M ↑340K','#f5f5f5'),part('WIFI','▮▮▮▯ 866M','#f5f5f5')].join(`<s style="font-size:${lab}px">&nbsp;&nbsp;·&nbsp;&nbsp;</s>`)}</div>`}
+  statsWidth(){const el=this.content.querySelector('.nstats'); if(!el)return 380*this.E; const c=this.content.style,prev=c.width; c.width='2400px'; const w=el.scrollWidth+30*this.E; c.width=prev; return Math.max(260*this.E,Math.min(560*this.E,w,this.W*.94))}
+  paint(s){s.stats?this.stats():s.board?this.board():this.card(s)}
+  async open(s,ms=520){const kind=s.stats?'stats':s.board?'board':'card'; this.opened(kind); this.draw(); this.paint(s);
+    if(s.stats){this.st.w=this.statsWidth();this.draw()}
+    this.content.style.opacity=0; await this.tween({d:s.stats?24*this.E:this.depth()},ms);
+    this.content.animate([{opacity:0},{opacity:1}],{duration:260,fill:'forwards'}); this.content.style.opacity=1}
+  async close(){this.content.animate([{opacity:1},{opacity:0}],{duration:200,fill:'forwards'}); await new Promise(r=>setTimeout(r,200));
+    await this.tween({d:0},380); this.closed(); this.draw(); this.content.innerHTML=''}
+  showNow(s){const kind=s.stats?'stats':s.board?'board':'card'; this.opened(kind); this.draw(); this.paint(s); if(s.stats){this.st.w=this.statsWidth()} this.st.d=s.stats?24*this.E:this.depth(); this.draw(); this.content.style.opacity=1}
 }
-measure(); st.w=NW; st.ear=px(8); st.bot=px(14); draw();
-addEventListener('resize',()=>{measure();st.ear=px(8);st.bot=px(14);draw()});
-if(!matchMedia('(prefers-reduced-motion: reduce)').matches){loop()}
-else{st.w=600*SC;st.ear=px(14);st.bot=px(26);draw();renderCard(SCENES[0]);st.d=contentDepth();draw();renderReadout(SCENES[0])}
+
+/* ============ hero: cycles; scenes: open once when they scroll into view ============ */
+const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const hero=new Notch(document.getElementById('herostage'));
+const readout=document.getElementById('readout');
+function showReadout(s){readout.innerHTML=`<span class="dot" style="background:${s.board||s.stats?HEX.cyan:HEX[s.c]}"></span><div><b>${s.t}</b><span>${s.d}</span></div>`}
+async function heroLoop(){let i=0;while(true){const s=SCENES[i%SCENES.length];i++;showReadout(s);await hero.open(s);
+  await new Promise(r=>setTimeout(r,s.board?5200:s.stats?4200:4000)); await hero.close(); await new Promise(r=>setTimeout(r,800))}}
+const scenes=[...document.querySelectorAll('.stage[data-scene],.stage[data-kind]')].map(st=>{
+  const n=new Notch(st); const s=st.dataset.kind==='board'?SCENES[6]:st.dataset.kind==='stats'?SCENES[7]:SCENES[+st.dataset.scene];
+  return {n,s,st,done:false}});
+function fitStage(sc){ // the band is only as tall as the open card needs, plus air
+  sc.st.style.height=Math.max(sc.s.stats?96:sc.s.board?200:120, sc.n.NH+sc.n.st.d+Math.max(22,sc.n.ex(34)))+'px'}
+if(reduced){hero.showNow(SCENES[0]);showReadout(SCENES[0]);scenes.forEach(sc=>{sc.n.showNow(sc.s);fitStage(sc);sc.done=true})}
+else{
+  heroLoop();
+  const io=new IntersectionObserver(es=>es.forEach(async e=>{if(!e.isIntersecting)return; const sc=scenes.find(x=>x.st===e.target); if(!sc||sc.done)return; sc.done=true; io.unobserve(e.target);
+    await sc.n.open(sc.s,700); fitStage(sc)}),{threshold:.35});
+  scenes.forEach(sc=>{ // pre-size the band to the open height so the layout does not jump when it opens
+    sc.n.opened(sc.s.stats?'stats':sc.s.board?'board':'card'); sc.n.paint(sc.s); if(sc.s.stats)sc.n.st.w=sc.n.statsWidth();
+    sc.n.st.d=sc.s.stats?24*sc.n.E:sc.n.depth(); fitStage(sc); sc.n.st.d=0; sc.n.closed(); sc.n.draw(); sc.n.content.innerHTML=''; io.observe(sc.st)});
+  const rio=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');rio.unobserve(e.target)}}),{threshold:.12});
+  document.querySelectorAll('.rv').forEach(el=>rio.observe(el));
+}
+addEventListener('resize',()=>{hero.measure();hero.draw();scenes.forEach(sc=>{sc.n.measure();if(sc.done){sc.n.showNow(sc.s);fitStage(sc)}else{sc.n.closed();sc.n.draw()}})});
 </script>
 </body>
 </html>
